@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 
 type Trade = {
@@ -16,7 +15,6 @@ type Trade = {
 }
 
 export default function DashboardPage() {
-  const router = useRouter()
   const [trades, setTrades] = useState<Trade[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -70,12 +68,12 @@ export default function DashboardPage() {
         <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-lg font-semibold">הטריידים שלי</h2>
-            <button
-              onClick={() => router.push('/dashboard/new-trade')}
+            
+              href="/dashboard/new-trade"
               className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
             >
               + טרייד חדש
-            </button>
+            </a>
           </div>
 
           {loading ? (
