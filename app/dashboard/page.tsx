@@ -66,20 +66,11 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-950 text-white">
 
-      {/* Lightbox */}
       {lightboxImage && (
-        <div
-          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 cursor-pointer"
-          onClick={() => setLightboxImage(null)}
-        >
+        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 cursor-pointer" onClick={() => setLightboxImage(null)}>
           <div className="relative max-w-4xl max-h-full">
             <img src={lightboxImage} alt="תמונת טרייד" className="max-w-full max-h-screen object-contain rounded-xl" />
-            <button
-              onClick={() => setLightboxImage(null)}
-              className="absolute top-2 left-2 bg-gray-900 text-white rounded-full w-8 h-8 flex items-center justify-center text-lg hover:bg-gray-700"
-            >
-              ✕
-            </button>
+            <button onClick={() => setLightboxImage(null)} className="absolute top-2 left-2 bg-gray-900 text-white rounded-full w-8 h-8 flex items-center justify-center text-lg hover:bg-gray-700">✕</button>
           </div>
         </div>
       )}
@@ -88,6 +79,7 @@ export default function DashboardPage() {
         <h1 className="text-xl font-bold text-emerald-400">יומן מסחר</h1>
         <div className="flex gap-4 items-center text-sm">
           <span className="text-white font-medium">דשבורד</span>
+          <button onClick={() => window.location.href = '/dashboard/journal'} className="text-gray-400 hover:text-emerald-400 transition-colors">יומן</button>
           <button onClick={handleLogout} className="text-gray-400 hover:text-red-400 transition-colors">התנתק</button>
         </div>
       </nav>
@@ -154,24 +146,15 @@ export default function DashboardPage() {
                   <tr key={trade.id} className="border-b border-gray-800 hover:bg-gray-800 transition-colors text-right">
                     <td className="py-3 pr-2">
                       {trade.image_url ? (
-                        <img
-                          src={trade.image_url}
-                          alt="טרייד"
-                          onClick={() => setLightboxImage(trade.image_url!)}
-                          className="w-12 h-10 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity border border-gray-700"
-                        />
+                        <img src={trade.image_url} alt="טרייד" onClick={() => setLightboxImage(trade.image_url!)}
+                          className="w-12 h-10 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity border border-gray-700" />
                       ) : (
-                        <div className="w-12 h-10 bg-gray-800 rounded border border-gray-700 flex items-center justify-center text-gray-600 text-xs">
-                          אין
-                        </div>
+                        <div className="w-12 h-10 bg-gray-800 rounded border border-gray-700 flex items-center justify-center text-gray-600 text-xs">אין</div>
                       )}
                     </td>
                     <td className="py-3 pr-2">
-                      {trade.direction === 'long' ? (
-                        <span className="text-emerald-400 font-bold text-lg">↑</span>
-                      ) : trade.direction === 'short' ? (
-                        <span className="text-red-400 font-bold text-lg">↓</span>
-                      ) : '-'}
+                      {trade.direction === 'long' ? <span className="text-emerald-400 font-bold text-lg">↑</span>
+                        : trade.direction === 'short' ? <span className="text-red-400 font-bold text-lg">↓</span> : '-'}
                     </td>
                     <td className="py-3 pr-2 text-gray-300">{trade.date}</td>
                     <td className="py-3 pr-2 font-bold text-white">{trade.symbol}</td>
@@ -194,17 +177,12 @@ export default function DashboardPage() {
                     <td className="py-3 pr-2 text-gray-400">{trade.setup || '-'}</td>
                     <td className="py-3 pr-2">
                       <div className="flex gap-2 justify-end">
-                        <button
-                          onClick={() => window.location.href = `/dashboard/edit-trade/${trade.id}`}
-                          className="text-xs bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded transition-colors"
-                        >
+                        <button onClick={() => window.location.href = `/dashboard/edit-trade/${trade.id}`}
+                          className="text-xs bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded transition-colors">
                           ✏️ ערוך
                         </button>
-                        <button
-                          onClick={() => handleDelete(trade.id)}
-                          disabled={deletingId === trade.id}
-                          className="text-xs bg-red-900 hover:bg-red-800 text-red-300 px-2 py-1 rounded transition-colors disabled:opacity-50"
-                        >
+                        <button onClick={() => handleDelete(trade.id)} disabled={deletingId === trade.id}
+                          className="text-xs bg-red-900 hover:bg-red-800 text-red-300 px-2 py-1 rounded transition-colors disabled:opacity-50">
                           {deletingId === trade.id ? '...' : '🗑️ מחק'}
                         </button>
                       </div>
