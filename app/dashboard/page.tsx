@@ -26,7 +26,7 @@ export default function DashboardPage() {
   const [trades, setTrades] = useState<Trade[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [lightboxImage, setLightboxImage] = useState<string | null>(null)
+  const [lightboxTrade, setLightboxTrade] = useState<{ image: string; notes: string | null; symbol: string } | null>(null)
 
   const fetchTrades = async () => {
     const supabase = createClient()
@@ -66,11 +66,19 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-950 text-white">
 
-      {lightboxImage && (
-        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 cursor-pointer" onClick={() => setLightboxImage(null)}>
-          <div className="relative max-w-4xl max-h-full">
-            <img src={lightboxImage} alt="תמונת טרייד" className="max-w-full max-h-screen object-contain rounded-xl" />
-            <button onClick={() => setLightboxImage(null)} className="absolute top-2 left-2 bg-gray-900 text-white rounded-full w-8 h-8 flex items-center justify-center text-lg hover:bg-gray-700">✕</button>
+      {lightboxTrade && (
+        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onClick={() => setLightboxTrade(null)}>
+          <div className="relative w-full max-w-3xl bg-gray-900 rounded-2xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setLightboxTrade(null)} className="absolute top-3 left-3 z-10 bg-gray-800 text-white rounded-full w-8 h-8 flex items-center justify-center text-lg hover:bg-gray-700">✕</button>
+            <img src={lightboxTrade.image} alt="תמונת טרייד" className="w-full object-contain max-h-[60vh]" />
+            <div className="p-5 border-t border-gray-700">
+              <p className="text-gray-400 text-xs mb-2 font-semibold uppercase tracking-wider">הערות — {lightboxTrade.symbol}</p>
+              {lightboxTrade.notes ? (
+                <p className="text-gray-100 text-sm leading-relaxed whitespace-pre-wrap">{lightboxTrade.notes}</p>
+              ) : (
+                <p className="text-gray-500 text-sm italic">אין הערות לטרייד זה</p>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -146,8 +154,12 @@ export default function DashboardPage() {
                   <tr key={trade.id} className="border-b border-gray-800 hover:bg-gray-800 transition-colors text-right">
                     <td className="py-3 pr-2">
                       {trade.image_url ? (
-                        <img src={trade.image_url} alt="טרייד" onClick={() => setLightboxImage(trade.image_url!)}
-                          className="w-12 h-10 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity border border-gray-700" />
+                        <img
+                          src={trade.image_url}
+                          alt="טרייד"
+                          onClick={() => setLightboxTrade({ image: trade.image_url!, notes: trade.notes, symbol: trade.symbol })}
+                          className="w-12 h-10 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity border border-gray-700"
+                        />
                       ) : (
                         <div className="w-12 h-10 bg-gray-800 rounded border border-gray-700 flex items-center justify-center text-gray-600 text-xs">אין</div>
                       )}
