@@ -1,23 +1,19 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 type Trade = {
   id: string
   date: string
   result: number | null
+  symbol?: string
 }
 
-type Period = 'daily' | 'weekly' | 'monthly'
-
 export default function JournalPage() {
-  const router = useRouter()
   const [trades, setTrades] = useState<Trade[]>([])
   const [loading, setLoading] = useState(true)
-  const [period, setPeriod] = useState<Period>('monthly')
+  const [selectedDay, setSelectedDay] = useState<{ date: string; trades: Trade[] } | null>(null)
 
   useEffect(() => {
     const init = async () => {
@@ -26,7 +22,7 @@ export default function JournalPage() {
       if (!user) { window.location.href = '/login'; return }
       const { data } = await supabase
         .from('trades')
-        .select('id, date, result')
+        .select('id, date, result, symbol')
         .order('date', { ascending: true })
       setTrades(data || [])
       setLoading(false)
@@ -35,48 +31,53 @@ export default function JournalPage() {
   }, [])
 
   const closedTrades = trades.filter(t => t.result !== null)
-
-  const getChartData = () => {
-    if (closedTrades.length === 0) return []
-
-    const groups: { [key: string]: number } = {}
-
-    closedTrades.forEach(trade => {
-      const date = new Date(trade.date)
-      let key = ''
-
-      if (period === 'daily') {
-        key = trade.date
-      } else if (period === 'weekly') {
-        const startOfWeek = new Date(date)
-        startOfWeek.setDate(date.getDate() - date.getDay())
-        key = startOfWeek.toISOString().split('T')[0]
-      } else {
-        key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-      }
-
-      groups[key] = (groups[key] || 0) + (trade.result || 0)
-    })
-
-    let cumulative = 0
-    return Object.entries(groups)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, value]) => {
-        cumulative += value
-        return {
-          label: period === 'monthly' ? key : key.slice(5),
-          רווח: parseFloat(value.toFixed(2)),
-          מצטבר: parseFloat(cumulative.toFixed(2)),
-        }
-      })
-  }
-
-  const chartData = getChartData()
   const totalProfit = closedTrades.reduce((sum, t) => sum + (t.result || 0), 0)
   const winners = closedTrades.filter(t => (t.result || 0) > 0)
   const winRate = closedTrades.length ? Math.round((winners.length / closedTrades.length) * 100) : 0
 
-  const periodLabel = { daily: 'יומי', weekly: 'שבועי', monthly: 'חודשי' }
+  // בניית נתוני Heatmap לפי חודש נוכחי
+  const buildHeatmap = () => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = now.getMonth()
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+    const firstDayOfWeek = new Date(year, month, 1).getDay() // 0=ראשון
+
+    // קיבוץ טריידים לפי תאריך
+    const byDate: { [date: string]: Trade[] } = {}
+    closedTrades.forEach(t => {
+      if (!byDate[t.date]) byDate[t.date] = []
+      byDate[t.date].push(t)
+    })
+
+    const cells = []
+    // תאים ריקים לפני היום הראשון
+    for (let i = 0; i < firstDayOfWeek; i++) {
+      cells.push(null)
+    }
+    // ימי החודש
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+      const dayTrades = byDate[dateStr] || []
+      const total = dayTrades.reduce((sum, t) => sum + (t.result || 0), 0)
+      cells.push({ day: d, date: dateStr, trades: dayTrades, total })
+    }
+
+    return cells
+  }
+
+  const heatmapCells = buildHeatmap()
+  const monthName = new Date().toLocaleString('he-IL', { month: 'long', year: 'numeric' })
+
+  const getColor = (total: number, hasTrades: boolean) => {
+    if (!hasTrades) return 'bg-gray-800 border-gray-700'
+    if (total > 500) return 'bg-emerald-600 border-emerald-500'
+    if (total > 100) return 'bg-emerald-700 border-emerald-600'
+    if (total > 0) return 'bg-emerald-900 border-emerald-700'
+    if (total > -100) return 'bg-red-900 border-red-700'
+    if (total > -500) return 'bg-red-700 border-red-600'
+    return 'bg-red-600 border-red-500'
+  }
 
   if (loading) return <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">טוען...</div>
 
@@ -111,49 +112,82 @@ export default function JournalPage() {
           </div>
         </div>
 
-        {/* גרף */}
+        {/* Heatmap */}
         <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-semibold">גרף ביצועים</h3>
-            <div className="flex gap-2">
-              {(['daily', 'weekly', 'monthly'] as Period[]).map(p => (
-                <button
-                  key={p}
-                  onClick={() => setPeriod(p)}
-                  className={`px-3 py-1 rounded-lg text-sm transition-colors ${period === p ? 'bg-emerald-500 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
-                >
-                  {periodLabel[p]}
-                </button>
-              ))}
+            <h3 className="text-lg font-semibold">מפת ביצועים — {monthName}</h3>
+            <div className="flex gap-3 text-xs text-gray-400 items-center">
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-emerald-600 inline-block"></span> רווח</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-red-600 inline-block"></span> הפסד</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-gray-800 inline-block"></span> אין טריידים</span>
             </div>
           </div>
 
-          {chartData.length === 0 ? (
-            <div className="text-center text-gray-500 py-16">
-              <p>אין נתונים להצגה</p>
-              <p className="text-sm mt-2">הוסף טריידים עם תוצאה כדי לראות את הגרף</p>
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={350}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="label" stroke="#9CA3AF" tick={{ fontSize: 12 }} />
-                <YAxis stroke="#9CA3AF" tick={{ fontSize: 12 }} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }}
-                  labelStyle={{ color: '#F9FAFB' }}
-                />
-                <Line type="monotone" dataKey="רווח" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981' }} />
-                <Line type="monotone" dataKey="מצטבר" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} strokeDasharray="5 5" />
-              </LineChart>
-            </ResponsiveContainer>
-          )}
+          {/* כותרות ימי שבוע */}
+          <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs text-gray-500">
+            {['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'].map(d => (
+              <div key={d}>{d}</div>
+            ))}
+          </div>
 
-          <div className="flex gap-4 mt-4 text-sm text-gray-400">
-            <div className="flex items-center gap-2"><div className="w-4 h-0.5 bg-emerald-400"></div> רווח לתקופה</div>
-            <div className="flex items-center gap-2"><div className="w-4 h-0.5 bg-blue-400 border-dashed"></div> מצטבר</div>
+          {/* תאי הלוח */}
+          <div className="grid grid-cols-7 gap-2">
+            {heatmapCells.map((cell, i) => {
+              if (!cell) return <div key={i} />
+              const hasTrades = cell.trades.length > 0
+              return (
+                <div
+                  key={i}
+                  onClick={() => hasTrades && setSelectedDay({ date: cell.date, trades: cell.trades })}
+                  className={`rounded-lg border p-1 min-h-[56px] flex flex-col items-center justify-center transition-all
+                    ${getColor(cell.total, hasTrades)}
+                    ${hasTrades ? 'cursor-pointer hover:opacity-80 hover:scale-105' : 'cursor-default'}
+                  `}
+                >
+                  <span className="text-xs text-white/70">{cell.day}</span>
+                  {hasTrades && (
+                    <span className={`text-xs font-bold ${cell.total >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>
+                      {cell.total >= 0 ? '+' : ''}${cell.total.toFixed(0)}
+                    </span>
+                  )}
+                  {cell.trades.length > 1 && (
+                    <span className="text-[10px] text-white/50">{cell.trades.length} טריידים</span>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
+
+        {/* פופאפ פירוט יום */}
+        {selectedDay && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={() => setSelectedDay(null)}>
+            <div className="bg-gray-900 rounded-2xl border border-gray-700 p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="text-lg font-bold">{selectedDay.date}</h4>
+                <button onClick={() => setSelectedDay(null)} className="text-gray-400 hover:text-white text-xl">✕</button>
+              </div>
+              <div className="flex flex-col gap-3">
+                {selectedDay.trades.map((t, i) => (
+                  <div key={t.id} className="flex justify-between items-center bg-gray-800 rounded-lg px-4 py-3">
+                    <span className="text-gray-300 text-sm">
+                      {i + 1}. {t.symbol || 'טרייד'}
+                    </span>
+                    <span className={`font-bold text-sm ${(t.result || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {(t.result || 0) >= 0 ? '+' : ''}${(t.result || 0).toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+                <div className="flex justify-between items-center border-t border-gray-700 pt-3 mt-1">
+                  <span className="text-gray-400 text-sm">סה"כ יומי</span>
+                  <span className={`font-bold ${selectedDay.trades.reduce((s, t) => s + (t.result || 0), 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    ${selectedDay.trades.reduce((s, t) => s + (t.result || 0), 0).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   )
