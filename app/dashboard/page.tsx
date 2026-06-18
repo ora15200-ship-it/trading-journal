@@ -86,7 +86,8 @@ export default function DashboardPage() {
       <nav className="bg-gray-900 border-b border-gray-800 px-6 py-4 flex justify-between items-center">
         <h1 className="text-xl font-bold text-emerald-400">יומן מסחר</h1>
         <div className="flex gap-4 items-center text-sm">
-          <span className="text-white font-medium">דשבורד</span>
+        <button onClick={() => window.location.href = '/portfolios'} className="text-gray-400 hover:text-white transition-colors">← התיקים שלי</button>
+        <span className="text-white font-medium">דשבורד</span>
           <button onClick={() => window.location.href = '/dashboard/journal'} className="text-gray-400 hover:text-emerald-400 transition-colors">יומן</button>
           <button onClick={handleLogout} className="text-gray-400 hover:text-red-400 transition-colors">התנתק</button>
         </div>

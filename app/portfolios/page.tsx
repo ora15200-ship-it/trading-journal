@@ -27,10 +27,19 @@ const PORTFOLIO_COLORS: { [key: string]: string } = {
   'other': 'border-gray-500/50 hover:border-gray-400',
 }
 
+const TYPE_LABELS: { [key: string]: string } = {
+  'long-term': 'ארוך טווח',
+  'aggressive': 'מסחר אגרסיבי',
+  'crypto': 'קריפטו',
+  'options': 'אופציות',
+  'other': 'אחר',
+}
+
 export default function PortfoliosPage() {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([])
   const [loading, setLoading] = useState(true)
   const [showNew, setShowNew] = useState(false)
+  const [editPortfolio, setEditPortfolio] = useState<Portfolio | null>(null)
   const [newName, setNewName] = useState('')
   const [newType, setNewType] = useState('long-term')
   const [newDesc, setNewDesc] = useState('')
@@ -65,11 +74,21 @@ export default function PortfoliosPage() {
       type: newType,
       description: newDesc.trim() || null,
     })
-    setNewName('')
-    setNewType('long-term')
-    setNewDesc('')
-    setShowNew(false)
-    setSaving(false)
+    setNewName(''); setNewType('long-term'); setNewDesc('')
+    setShowNew(false); setSaving(false)
+    await fetchPortfolios()
+  }
+
+  const handleEdit = async () => {
+    if (!editPortfolio || !editPortfolio.name.trim()) return
+    setSaving(true)
+    const supabase = createClient()
+    await supabase.from('portfolios').update({
+      name: editPortfolio.name.trim(),
+      type: editPortfolio.type,
+      description: editPortfolio.description?.trim() || null,
+    }).eq('id', editPortfolio.id)
+    setEditPortfolio(null); setSaving(false)
     await fetchPortfolios()
   }
 
@@ -106,24 +125,23 @@ export default function PortfoliosPage() {
             >
               <div className="flex justify-between items-start mb-3">
                 <span className="text-4xl">{PORTFOLIO_ICONS[p.type] || '💼'}</span>
-                <button
-                  onClick={e => { e.stopPropagation(); handleDelete(p.id) }}
-                  className="text-gray-600 hover:text-red-400 text-sm transition-colors"
-                >✕</button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={e => { e.stopPropagation(); setEditPortfolio({ ...p }) }}
+                    className="text-gray-600 hover:text-emerald-400 text-sm transition-colors px-1"
+                  >✏️</button>
+                  <button
+                    onClick={e => { e.stopPropagation(); handleDelete(p.id) }}
+                    className="text-gray-600 hover:text-red-400 text-sm transition-colors px-1"
+                  >✕</button>
+                </div>
               </div>
               <h3 className="text-lg font-bold mb-1">{p.name}</h3>
               {p.description && <p className="text-gray-400 text-sm">{p.description}</p>}
-              <div className="mt-4 text-xs text-gray-500">
-                {p.type === 'long-term' && 'ארוך טווח'}
-                {p.type === 'aggressive' && 'מסחר אגרסיבי'}
-                {p.type === 'crypto' && 'קריפטו'}
-                {p.type === 'options' && 'אופציות'}
-                {p.type === 'other' && 'אחר'}
-              </div>
+              <div className="mt-4 text-xs text-gray-500">{TYPE_LABELS[p.type] || 'אחר'}</div>
             </div>
           ))}
 
-          {/* כפתור תיק חדש */}
           <div
             onClick={() => setShowNew(true)}
             className="bg-gray-900 rounded-2xl border-2 border-dashed border-gray-700 p-6 cursor-pointer transition-all hover:border-emerald-500 hover:bg-gray-800 flex flex-col items-center justify-center min-h-[160px] gap-2"
@@ -141,20 +159,14 @@ export default function PortfoliosPage() {
               <div className="flex flex-col gap-4">
                 <div>
                   <label className="text-gray-400 text-sm mb-1 block">שם התיק</label>
-                  <input
-                    value={newName}
-                    onChange={e => setNewName(e.target.value)}
+                  <input value={newName} onChange={e => setNewName(e.target.value)}
                     placeholder="לדוגמה: תיק ארוך טווח"
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-500"
-                  />
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-500" />
                 </div>
                 <div>
                   <label className="text-gray-400 text-sm mb-1 block">סוג</label>
-                  <select
-                    value={newType}
-                    onChange={e => setNewType(e.target.value)}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-500"
-                  >
+                  <select value={newType} onChange={e => setNewType(e.target.value)}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-500">
                     <option value="long-term">📈 ארוך טווח</option>
                     <option value="aggressive">⚡ מסחר אגרסיבי</option>
                     <option value="crypto">🪙 קריפטו</option>
@@ -164,25 +176,63 @@ export default function PortfoliosPage() {
                 </div>
                 <div>
                   <label className="text-gray-400 text-sm mb-1 block">תיאור (אופציונלי)</label>
-                  <input
-                    value={newDesc}
-                    onChange={e => setNewDesc(e.target.value)}
+                  <input value={newDesc} onChange={e => setNewDesc(e.target.value)}
                     placeholder="תיאור קצר..."
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-500"
-                  />
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-500" />
                 </div>
                 <div className="flex gap-3 mt-2">
-                  <button
-                    onClick={handleCreate}
-                    disabled={saving || !newName.trim()}
-                    className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-                  >
+                  <button onClick={handleCreate} disabled={saving || !newName.trim()}
+                    className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
                     {saving ? 'יוצר...' : 'צור תיק'}
                   </button>
-                  <button
-                    onClick={() => setShowNew(false)}
-                    className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 py-2 rounded-lg text-sm transition-colors"
-                  >
+                  <button onClick={() => setShowNew(false)}
+                    className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 py-2 rounded-lg text-sm transition-colors">
+                    ביטול
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* טופס עריכת תיק */}
+        {editPortfolio && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={() => setEditPortfolio(null)}>
+            <div className="bg-gray-900 rounded-2xl border border-gray-700 p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+              <h3 className="text-lg font-bold mb-4">עריכת תיק</h3>
+              <div className="flex flex-col gap-4">
+                <div>
+                  <label className="text-gray-400 text-sm mb-1 block">שם התיק</label>
+                  <input value={editPortfolio.name}
+                    onChange={e => setEditPortfolio({ ...editPortfolio, name: e.target.value })}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-500" />
+                </div>
+                <div>
+                  <label className="text-gray-400 text-sm mb-1 block">סוג</label>
+                  <select value={editPortfolio.type}
+                    onChange={e => setEditPortfolio({ ...editPortfolio, type: e.target.value })}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-500">
+                    <option value="long-term">📈 ארוך טווח</option>
+                    <option value="aggressive">⚡ מסחר אגרסיבי</option>
+                    <option value="crypto">🪙 קריפטו</option>
+                    <option value="options">🎯 אופציות</option>
+                    <option value="other">💼 אחר</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-gray-400 text-sm mb-1 block">תיאור (אופציונלי)</label>
+                  <input value={editPortfolio.description || ''}
+                    onChange={e => setEditPortfolio({ ...editPortfolio, description: e.target.value })}
+                    placeholder="תיאור קצר..."
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-500" />
+                </div>
+                <div className="flex gap-3 mt-2">
+                  <button onClick={handleEdit} disabled={saving || !editPortfolio.name.trim()}
+                    className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
+                    {saving ? 'שומר...' : 'שמור שינויים'}
+                  </button>
+                  <button onClick={() => setEditPortfolio(null)}
+                    className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 py-2 rounded-lg text-sm transition-colors">
                     ביטול
                   </button>
                 </div>
