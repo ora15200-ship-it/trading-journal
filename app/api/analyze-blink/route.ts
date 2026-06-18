@@ -11,9 +11,13 @@ export async function POST(req: NextRequest) {
 
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-    const imageContent = images.map((base64: string) => ({
+    const imageContent = images.map((img: { data: string; type: string }) => ({
       type: 'image' as const,
-      source: { type: 'base64' as const, media_type: 'image/png' as const, data: base64 }
+      source: {
+        type: 'base64' as const,
+        media_type: (img.type === 'image/png' ? 'image/png' : 'image/jpeg') as 'image/png' | 'image/jpeg',
+        data: img.data
+      }
     }))
 
     const response = await client.messages.create({

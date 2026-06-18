@@ -55,9 +55,9 @@ export default function ImportPage() {
 
     try {
       const base64Images = await Promise.all(images.map(file =>
-        new Promise<string>((resolve, reject) => {
+        new Promise<{ data: string; type: string }>((resolve, reject) => {
           const reader = new FileReader()
-          reader.onload = () => resolve((reader.result as string).split(',')[1])
+          reader.onload = () => resolve({ data: (reader.result as string).split(',')[1], type: file.type })
           reader.onerror = reject
           reader.readAsDataURL(file)
         })
