@@ -48,13 +48,11 @@ export default function DashboardPage() {
 
     const portfolioId = getPortfolioId()
 
-    // שליפת פרטי התיק
     if (portfolioId) {
       const { data: p } = await supabase.from('portfolios').select('id, name, type').eq('id', portfolioId).single()
       setPortfolio(p)
     }
 
-    // שליפת טריידים לפי תיק
     let query = supabase.from('trades').select('*').order('date', { ascending: false })
     if (portfolioId) {
       query = query.eq('portfolio_id', portfolioId)
@@ -95,7 +93,6 @@ export default function DashboardPage() {
   const winRate = closedTrades.length ? Math.round((winners.length / closedTrades.length) * 100) : 0
   const totalProfit = closedTrades.reduce((sum, t) => sum + (t.result ?? 0), 0)
 
-  // רווח החודש
   const now = new Date()
   const monthTrades = closedTrades.filter(t => {
     const d = new Date(t.date)
@@ -169,9 +166,19 @@ export default function DashboardPage() {
         <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 overflow-x-auto">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-lg font-semibold">הטריידים שלי</h2>
-            <Link href={newTradeUrl} className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-              + טרייד חדש
-            </Link>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  const pid = new URLSearchParams(window.location.search).get('portfolio')
+                  window.location.href = pid ? `/dashboard/import?portfolio=${pid}` : '/dashboard/import'
+                }}
+                className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                📥 ייבוא
+              </button>
+              <Link href={newTradeUrl} className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                + טרייד חדש
+              </Link>
+            </div>
           </div>
 
           {loading ? (
