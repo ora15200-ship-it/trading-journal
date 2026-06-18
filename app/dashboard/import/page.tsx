@@ -70,9 +70,14 @@ export default function ImportPage() {
       })
 
       const data = await response.json()
-      setResult(data)
-    } catch {
-      alert('שגיאה בניתוח התמונות — בדוק שה-API Key מוגדר')
+
+      if (data.error) {
+        alert('שגיאת שרת: ' + data.error)
+      } else {
+        setResult(data)
+      }
+    } catch (err: any) {
+      alert('שגיאה: ' + (err.message || 'לא ידועה'))
     }
     setLoading(false)
   }
