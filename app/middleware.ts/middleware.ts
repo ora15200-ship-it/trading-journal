@@ -34,13 +34,21 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
+  if (!user && request.nextUrl.pathname.startsWith('/portfolios')) {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
+
   if (user && request.nextUrl.pathname === '/login') {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    return NextResponse.redirect(new URL('/portfolios', request.url))
+  }
+
+  if (user && request.nextUrl.pathname === '/dashboard') {
+    return NextResponse.redirect(new URL('/portfolios', request.url))
   }
 
   return supabaseResponse
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/login'],
+  matcher: ['/dashboard/:path*', '/portfolios/:path*', '/login'],
 }
