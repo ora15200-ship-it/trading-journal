@@ -12,7 +12,7 @@ export default function Home() {
         </p>
         <div className="flex gap-4 justify-center">
           <Link
-            href="/dashboard"
+            href="/portfolios"
             className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3 rounded-lg font-semibold transition-colors"
           >
             כניסה לדשבורד
