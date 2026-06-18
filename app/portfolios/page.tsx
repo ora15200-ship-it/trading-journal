@@ -11,6 +11,15 @@ type Portfolio = {
   created_at: string
 }
 
+type PortfolioStats = {
+  totalTrades: number
+  closedTrades: number
+  winRate: number
+  totalProfit: number
+  monthProfit: number
+  lastTradeDate: string | null
+}
+
 const PORTFOLIO_ICONS: { [key: string]: string } = {
   'long-term': '📈',
   'aggressive': '⚡',
@@ -37,6 +46,7 @@ const TYPE_LABELS: { [key: string]: string } = {
 
 export default function PortfoliosPage() {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([])
+  const [stats, setStats] = useState<{ [id: string]: PortfolioStats }>({})
   const [loading, setLoading] = useState(true)
   const [showNew, setShowNew] = useState(false)
   const [editPortfolio, setEditPortfolio] = useState<Portfolio | null>(null)
@@ -49,8 +59,37 @@ export default function PortfoliosPage() {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { window.location.href = '/login'; return }
-    const { data } = await supabase.from('portfolios').select('*').order('created_at')
-    setPortfolios(data || [])
+
+    const { data: portfoliosData } = await supabase.from('portfolios').select('*').order('created_at')
+    setPortfolios(portfoliosData || [])
+
+    // שליפת סטטיסטיקות לכל תיק
+    const { data: trades } = await supabase.from('trades').select('portfolio_id, result, date')
+    const now = new Date()
+
+    const statsMap: { [id: string]: PortfolioStats } = {}
+    for (const p of portfoliosData || []) {
+      const pTrades = (trades || []).filter(t => t.portfolio_id === p.id)
+      const closed = pTrades.filter(t => t.result !== null)
+      const winners = closed.filter(t => t.result > 0)
+      const totalProfit = closed.reduce((sum, t) => sum + (t.result || 0), 0)
+      const monthTrades = closed.filter(t => {
+        const d = new Date(t.date)
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+      })
+      const monthProfit = monthTrades.reduce((sum, t) => sum + (t.result || 0), 0)
+      const sorted = [...pTrades].sort((a, b) => b.date.localeCompare(a.date))
+
+      statsMap[p.id] = {
+        totalTrades: pTrades.length,
+        closedTrades: closed.length,
+        winRate: closed.length ? Math.round((winners.length / closed.length) * 100) : 0,
+        totalProfit,
+        monthProfit,
+        lastTradeDate: sorted[0]?.date || null,
+      }
+    }
+    setStats(statsMap)
     setLoading(false)
   }
 
@@ -99,6 +138,15 @@ export default function PortfoliosPage() {
     await fetchPortfolios()
   }
 
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr)
+    const diff = Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24))
+    if (diff === 0) return 'היום'
+    if (diff === 1) return 'אתמול'
+    if (diff < 7) return `לפני ${diff} ימים`
+    return dateStr
+  }
+
   if (loading) return (
     <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">טוען...</div>
   )
@@ -117,35 +165,70 @@ export default function PortfoliosPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-          {portfolios.map(p => (
-            <div
-              key={p.id}
-              onClick={() => window.location.href = `/dashboard?portfolio=${p.id}`}
-              className={`bg-gray-900 rounded-2xl border-2 p-6 cursor-pointer transition-all hover:scale-105 hover:bg-gray-800 ${PORTFOLIO_COLORS[p.type] || PORTFOLIO_COLORS['other']}`}
-            >
-              <div className="flex justify-between items-start mb-3">
-                <span className="text-4xl">{PORTFOLIO_ICONS[p.type] || '💼'}</span>
-                <div className="flex gap-2">
-                  <button
-                    onClick={e => { e.stopPropagation(); setEditPortfolio({ ...p }) }}
-                    className="text-gray-600 hover:text-emerald-400 text-sm transition-colors px-1"
-                  >✏️</button>
-                  <button
-                    onClick={e => { e.stopPropagation(); handleDelete(p.id) }}
-                    className="text-gray-600 hover:text-red-400 text-sm transition-colors px-1"
-                  >✕</button>
+          {portfolios.map(p => {
+            const s = stats[p.id]
+            return (
+              <div
+                key={p.id}
+                onClick={() => window.location.href = `/dashboard?portfolio=${p.id}`}
+                className={`bg-gray-900 rounded-2xl border-2 p-6 cursor-pointer transition-all hover:scale-105 hover:bg-gray-800 ${PORTFOLIO_COLORS[p.type] || PORTFOLIO_COLORS['other']}`}
+              >
+                {/* כותרת */}
+                <div className="flex justify-between items-start mb-3">
+                  <span className="text-3xl">{PORTFOLIO_ICONS[p.type] || '💼'}</span>
+                  <div className="flex gap-2">
+                    <button onClick={e => { e.stopPropagation(); setEditPortfolio({ ...p }) }}
+                      className="text-gray-600 hover:text-emerald-400 text-sm transition-colors px-1">✏️</button>
+                    <button onClick={e => { e.stopPropagation(); handleDelete(p.id) }}
+                      className="text-gray-600 hover:text-red-400 text-sm transition-colors px-1">✕</button>
+                  </div>
                 </div>
-              </div>
-              <h3 className="text-lg font-bold mb-1">{p.name}</h3>
-              {p.description && <p className="text-gray-400 text-sm">{p.description}</p>}
-              <div className="mt-4 text-xs text-gray-500">{TYPE_LABELS[p.type] || 'אחר'}</div>
-            </div>
-          ))}
 
-          <div
-            onClick={() => setShowNew(true)}
-            className="bg-gray-900 rounded-2xl border-2 border-dashed border-gray-700 p-6 cursor-pointer transition-all hover:border-emerald-500 hover:bg-gray-800 flex flex-col items-center justify-center min-h-[160px] gap-2"
-          >
+                <h3 className="text-lg font-bold mb-0.5">{p.name}</h3>
+                <p className="text-xs text-gray-500 mb-4">{TYPE_LABELS[p.type] || 'אחר'}</p>
+
+                {/* סטטיסטיקות */}
+                {s && s.totalTrades > 0 ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                      <div className="bg-gray-800 rounded-lg p-2 text-center">
+                        <p className="text-[10px] text-gray-500 mb-0.5">רווח כולל</p>
+                        <p className={`text-sm font-bold ${s.totalProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {s.totalProfit >= 0 ? '+' : ''}${s.totalProfit.toFixed(0)}
+                        </p>
+                      </div>
+                      <div className="bg-gray-800 rounded-lg p-2 text-center">
+                        <p className="text-[10px] text-gray-500 mb-0.5">Win Rate</p>
+                        <p className={`text-sm font-bold ${s.winRate >= 50 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {s.winRate}%
+                        </p>
+                      </div>
+                      <div className="bg-gray-800 rounded-lg p-2 text-center">
+                        <p className="text-[10px] text-gray-500 mb-0.5">החודש</p>
+                        <p className={`text-sm font-bold ${s.monthProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {s.monthProfit >= 0 ? '+' : ''}${s.monthProfit.toFixed(0)}
+                        </p>
+                      </div>
+                      <div className="bg-gray-800 rounded-lg p-2 text-center">
+                        <p className="text-[10px] text-gray-500 mb-0.5">טריידים</p>
+                        <p className="text-sm font-bold text-white">{s.closedTrades}</p>
+                      </div>
+                    </div>
+                    {s.lastTradeDate && (
+                      <p className="text-[10px] text-gray-600 text-left">
+                        פעיל לאחרונה: {formatDate(s.lastTradeDate)}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-xs text-gray-600 italic">אין טריידים עדיין</p>
+                )}
+              </div>
+            )
+          })}
+
+          <div onClick={() => setShowNew(true)}
+            className="bg-gray-900 rounded-2xl border-2 border-dashed border-gray-700 p-6 cursor-pointer transition-all hover:border-emerald-500 hover:bg-gray-800 flex flex-col items-center justify-center min-h-[160px] gap-2">
             <span className="text-4xl text-gray-600">+</span>
             <span className="text-gray-500 text-sm">תיק חדש</span>
           </div>
