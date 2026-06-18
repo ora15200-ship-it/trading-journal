@@ -1,11 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 
 export default function EditTradePage() {
-  const router = useRouter()
   const params = useParams()
   const id = params.id as string
   const [loading, setLoading] = useState(true)
@@ -13,6 +12,7 @@ export default function EditTradePage() {
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [existingImage, setExistingImage] = useState<string | null>(null)
+  const [portfolioId, setPortfolioId] = useState<string | null>(null)
 
   const [form, setForm] = useState({
     date: '',
@@ -44,6 +44,7 @@ export default function EditTradePage() {
       const { data } = await supabase.from('trades').select('*').eq('id', id).single()
       if (data) {
         setExistingImage(data.image_url || null)
+        setPortfolioId(data.portfolio_id || null)
         setForm({
           date: data.date || '',
           symbol: data.symbol || '',
@@ -116,7 +117,7 @@ export default function EditTradePage() {
     if (error) {
       alert('שגיאה בשמירה: ' + error.message)
     } else {
-      window.location.href = '/dashboard'
+      window.location.href = portfolioId ? `/dashboard?portfolio=${portfolioId}` : '/dashboard'
     }
   }
 
@@ -126,7 +127,9 @@ export default function EditTradePage() {
     <div className="min-h-screen bg-gray-950 text-white">
       <nav className="bg-gray-900 border-b border-gray-800 px-6 py-4 flex justify-between items-center">
         <h1 className="text-xl font-bold text-emerald-400">יומן מסחר</h1>
-        <button onClick={() => window.location.href = '/dashboard'} className="text-sm text-gray-400 hover:text-white transition-colors">
+        <button
+          onClick={() => window.location.href = portfolioId ? `/dashboard?portfolio=${portfolioId}` : '/dashboard'}
+          className="text-sm text-gray-400 hover:text-white transition-colors">
           ← חזרה לדשבורד
         </button>
       </nav>
