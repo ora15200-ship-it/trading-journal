@@ -1,26 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
 export async function POST(req: NextRequest) {
-  const { images } = await req.json()
+  try {
+    const { images } = await req.json()
 
-  const imageContent = images.map((base64: string) => ({
-    type: 'image' as const,
-    source: { type: 'base64' as const, media_type: 'image/jpeg' as const, data: base64 }
-  }))
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return NextResponse.json({ error: 'ANTHROPIC_API_KEY חסר' }, { status: 500 })
+    }
 
-  const response = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 4000,
-    messages: [{
-      role: 'user',
-      content: [
-        ...imageContent,
-        {
-          type: 'text',
-          text: `אתה מנתח צילומי מסך של עסקאות מכל פלטפורמת מסחר או בנק (בלינק, Interactive Brokers, בנק הפועלים, וכו').
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+    const imageContent = images.map((base64: string) => ({
+      type: 'image' as const,
+      source: { type: 'base64' as const, media_type: 'image/jpeg' as const, data: base64 }
+    }))
+
+    const response = await client.messages.create({
+      model: 'claude-sonnet-4-5-20250929',
+      max_tokens: 4000,
+      messages: [{
+        role: 'user',
+        content: [
+          ...imageContent,
+          {
+            type: 'text',
+            text: `אתה מנתח צילומי מסך של עסקאות מכל פלטפורמת מסחר או בנק (בלינק, Interactive Brokers, בנק הפועלים, וכו').
 
 זהה את כל העסקאות מהתמונות. 
 
@@ -58,14 +63,18 @@ export async function POST(req: NextRequest) {
 
 תאריכים בפורמט YYYY-MM-DD בלבד.
 החזר JSON תקין בלבד ללא שום טקסט נוסף.`
-        }
-      ]
-    }]
-  })
+          }
+        ]
+      }]
+    })
 
-  const text = (response.content[0] as { type: string; text: string }).text
-  const clean = text.replace(/```json|```/g, '').trim()
-  const data = JSON.parse(clean)
+    const text = (response.content[0] as { type: string; text: string }).text
+    const clean = text.replace(/```json|```/g, '').trim()
+    const data = JSON.parse(clean)
 
-  return NextResponse.json(data)
+    return NextResponse.json(data)
+  } catch (err: any) {
+    console.error('Analyze error:', err)
+    return NextResponse.json({ error: err.message || 'שגיאה לא ידועה' }, { status: 500 })
+  }
 }
