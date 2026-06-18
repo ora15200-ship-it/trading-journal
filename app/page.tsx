@@ -5,7 +5,7 @@ export default function Home() {
     <main className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center p-8">
       <div className="max-w-2xl w-full text-center">
         <h1 className="text-5xl font-bold mb-4 text-emerald-400">
-          יומן מסחר
+          יומן ההשקעות שלי
         </h1>
         <p className="text-gray-400 text-xl mb-12">
           נהל את הטריידים שלך בצורה חכמה
@@ -15,7 +15,7 @@ export default function Home() {
             href="/portfolios"
             className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3 rounded-lg font-semibold transition-colors"
           >
-            כניסה לדשבורד
+            כניסה לתיקים שלי
           </Link>
         </div>
       </div>
