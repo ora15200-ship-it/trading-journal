@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
 
     const imageContent = images.map((base64: string) => ({
       type: 'image' as const,
-      source: { type: 'base64' as const, media_type: 'image/jpeg' as const, data: base64 }
+      source: { type: 'base64' as const, media_type: 'image/png' as const, data: base64 }
     }))
 
     const response = await client.messages.create({
