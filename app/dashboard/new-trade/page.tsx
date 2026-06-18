@@ -1,11 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 
 export default function NewTradePage() {
-  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -22,6 +20,11 @@ export default function NewTradePage() {
     notes: '',
     result: '',
   })
+
+  const getPortfolioId = () => {
+    const params = new URLSearchParams(window.location.search)
+    return params.get('portfolio')
+  }
 
   const entryPrice = parseFloat(form.entry_price) || 0
   const stopLoss = parseFloat(form.stop_loss) || 0
@@ -51,6 +54,7 @@ export default function NewTradePage() {
     setLoading(true)
 
     const supabase = createClient()
+    const portfolioId = getPortfolioId()
     let image_url = null
 
     if (imageFile) {
@@ -72,6 +76,7 @@ export default function NewTradePage() {
 
     const { error } = await supabase.from('trades').insert([{
       user_id: user?.id,
+      portfolio_id: portfolioId || null,
       date: form.date,
       symbol: form.symbol.toUpperCase(),
       direction: form.direction,
@@ -93,7 +98,7 @@ export default function NewTradePage() {
     if (error) {
       alert('שגיאה בשמירה: ' + error.message)
     } else {
-      window.location.href = '/dashboard'
+      window.location.href = portfolioId ? `/dashboard?portfolio=${portfolioId}` : '/dashboard'
     }
   }
 
@@ -101,7 +106,12 @@ export default function NewTradePage() {
     <div className="min-h-screen bg-gray-950 text-white">
       <nav className="bg-gray-900 border-b border-gray-800 px-6 py-4 flex justify-between items-center">
         <h1 className="text-xl font-bold text-emerald-400">יומן מסחר</h1>
-        <button onClick={() => window.location.href = '/dashboard'} className="text-sm text-gray-400 hover:text-white transition-colors">
+        <button
+          onClick={() => {
+            const portfolioId = getPortfolioId()
+            window.location.href = portfolioId ? `/dashboard?portfolio=${portfolioId}` : '/dashboard'
+          }}
+          className="text-sm text-gray-400 hover:text-white transition-colors">
           ← חזרה לדשבורד
         </button>
       </nav>

@@ -20,22 +20,49 @@ type Trade = {
   setup: string | null
   notes: string | null
   image_url: string | null
+  portfolio_id: string | null
+}
+
+type Portfolio = {
+  id: string
+  name: string
+  type: string
 }
 
 export default function DashboardPage() {
   const [trades, setTrades] = useState<Trade[]>([])
+  const [portfolio, setPortfolio] = useState<Portfolio | null>(null)
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [lightboxTrade, setLightboxTrade] = useState<{ image: string; notes: string | null; symbol: string } | null>(null)
+
+  const getPortfolioId = () => {
+    const params = new URLSearchParams(window.location.search)
+    return params.get('portfolio')
+  }
 
   const fetchTrades = async () => {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { window.location.href = '/login'; return }
-    const { data } = await supabase
-      .from('trades')
-      .select('*')
-      .order('date', { ascending: false })
+
+    const portfolioId = getPortfolioId()
+
+    // שליפת פרטי התיק
+    if (portfolioId) {
+      const { data: p } = await supabase.from('portfolios').select('id, name, type').eq('id', portfolioId).single()
+      setPortfolio(p)
+    }
+
+    // שליפת טריידים לפי תיק
+    let query = supabase.from('trades').select('*').order('date', { ascending: false })
+    if (portfolioId) {
+      query = query.eq('portfolio_id', portfolioId)
+    } else {
+      query = query.is('portfolio_id', null)
+    }
+
+    const { data } = await query
     setTrades(data || [])
     setLoading(false)
   }
@@ -57,11 +84,24 @@ export default function DashboardPage() {
     setDeletingId(null)
   }
 
+  const portfolioId = typeof window !== 'undefined' ? getPortfolioId() : null
+  const newTradeUrl = portfolioId
+    ? `/dashboard/new-trade?portfolio=${portfolioId}`
+    : '/dashboard/new-trade'
+
   const totalTrades = trades.length
   const closedTrades = trades.filter(t => t.result !== null)
   const winners = closedTrades.filter(t => (t.result ?? 0) > 0)
   const winRate = closedTrades.length ? Math.round((winners.length / closedTrades.length) * 100) : 0
   const totalProfit = closedTrades.reduce((sum, t) => sum + (t.result ?? 0), 0)
+
+  // רווח החודש
+  const now = new Date()
+  const monthTrades = closedTrades.filter(t => {
+    const d = new Date(t.date)
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+  })
+  const monthProfit = monthTrades.reduce((sum, t) => sum + (t.result ?? 0), 0)
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -84,17 +124,22 @@ export default function DashboardPage() {
       )}
 
       <nav className="bg-gray-900 border-b border-gray-800 px-6 py-4 flex justify-between items-center">
-        <h1 className="text-xl font-bold text-emerald-400">יומן מסחר</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-bold text-emerald-400">יומן מסחר</h1>
+          {portfolio && (
+            <span className="text-gray-500 text-sm">/ {portfolio.name}</span>
+          )}
+        </div>
         <div className="flex gap-4 items-center text-sm">
-        <button onClick={() => window.location.href = '/portfolios'} className="text-gray-400 hover:text-white transition-colors">← התיקים שלי</button>
-        <span className="text-white font-medium">דשבורד</span>
-          <button onClick={() => window.location.href = '/dashboard/journal'} className="text-gray-400 hover:text-emerald-400 transition-colors">יומן</button>
+          <button onClick={() => window.location.href = '/portfolios'} className="text-gray-400 hover:text-white transition-colors">← התיקים שלי</button>
+          <span className="text-white font-medium">דשבורד</span>
+          <button onClick={() => window.location.href = portfolioId ? `/dashboard/journal?portfolio=${portfolioId}` : '/dashboard/journal'} className="text-gray-400 hover:text-emerald-400 transition-colors">יומן</button>
           <button onClick={handleLogout} className="text-gray-400 hover:text-red-400 transition-colors">התנתק</button>
         </div>
       </nav>
 
       <main className="max-w-full mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
           <div className="bg-gray-900 rounded-xl p-5 border border-gray-800">
             <p className="text-gray-400 text-sm mb-1">סה"כ טריידים</p>
             <p className="text-3xl font-bold">{totalTrades}</p>
@@ -113,12 +158,18 @@ export default function DashboardPage() {
             <p className="text-gray-400 text-sm mb-1">טריידים סגורים</p>
             <p className="text-3xl font-bold">{closedTrades.length}</p>
           </div>
+          <div className="bg-gray-900 rounded-xl p-5 border border-gray-800">
+            <p className="text-gray-400 text-sm mb-1">רווח החודש</p>
+            <p className={`text-3xl font-bold ${monthProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {monthProfit >= 0 ? '+' : ''}${monthProfit.toFixed(2)}
+            </p>
+          </div>
         </div>
 
         <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 overflow-x-auto">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-lg font-semibold">הטריידים שלי</h2>
-            <Link href="/dashboard/new-trade" className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+            <Link href={newTradeUrl} className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
               + טרייד חדש
             </Link>
           </div>
@@ -127,7 +178,7 @@ export default function DashboardPage() {
             <div className="text-center text-gray-500 py-16">טוען...</div>
           ) : trades.length === 0 ? (
             <div className="text-center text-gray-500 py-16">
-              <p className="text-lg">עדיין אין טריידים</p>
+              <p className="text-lg">עדיין אין טריידים בתיק זה</p>
               <p className="text-sm mt-2">לחץ על טרייד חדש כדי להתחיל</p>
             </div>
           ) : (
@@ -155,12 +206,9 @@ export default function DashboardPage() {
                   <tr key={trade.id} className="border-b border-gray-800 hover:bg-gray-800 transition-colors text-right">
                     <td className="py-3 pr-2">
                       {trade.image_url ? (
-                        <img
-                          src={trade.image_url}
-                          alt="טרייד"
+                        <img src={trade.image_url} alt="טרייד"
                           onClick={() => setLightboxTrade({ image: trade.image_url!, notes: trade.notes, symbol: trade.symbol })}
-                          className="w-12 h-10 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity border border-gray-700"
-                        />
+                          className="w-12 h-10 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity border border-gray-700" />
                       ) : (
                         <div className="w-12 h-10 bg-gray-800 rounded border border-gray-700 flex items-center justify-center text-gray-600 text-xs">אין</div>
                       )}
