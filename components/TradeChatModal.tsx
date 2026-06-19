@@ -216,15 +216,26 @@ export default function TradeChatModal({
       .limit(100)
 
     tradesQuery = portfolioId ? tradesQuery.eq('portfolio_id', portfolioId) : tradesQuery.is('portfolio_id', null)
-    const { data: allTrades } = await tradesQuery
+    const { data: allTrades, error: tradesError } = await tradesQuery
+
+    if (tradesError) {
+      setDisplayMessages(m => [...m, { role: 'assistant', text: '⚠️ לא הצלחתי לקרוא את העסקאות לניתוח: ' + tradesError.message }])
+      return
+    }
 
     if (!allTrades || allTrades.length === 0) {
+      setDisplayMessages(m => [...m, { role: 'assistant', text: '⚠️ לא נמצאו עסקאות בתיק הזה לניתוח' }])
       return
     }
 
     let profileQuery = supabase.from('trader_profile').select('id, insights').eq('user_id', userId)
     profileQuery = portfolioId ? profileQuery.eq('portfolio_id', portfolioId) : profileQuery.is('portfolio_id', null)
-    const { data: existingProfile } = await profileQuery.maybeSingle()
+    const { data: existingProfile, error: profileError } = await profileQuery.maybeSingle()
+
+    if (profileError) {
+      setDisplayMessages(m => [...m, { role: 'assistant', text: '⚠️ שגיאה בקריאת פרופיל קיים: ' + profileError.message }])
+      return
+    }
 
     try {
       const res = await fetch('/api/trader-coach', {
@@ -233,20 +244,38 @@ export default function TradeChatModal({
         body: JSON.stringify({ trades: allTrades, previousInsights: existingProfile?.insights || null }),
       })
       const data = await res.json()
-      if (data.insights) {
-        if (existingProfile?.id) {
-          await supabase.from('trader_profile').update({ insights: data.insights, updated_at: new Date().toISOString() }).eq('id', existingProfile.id)
-        } else {
-          await supabase.from('trader_profile').insert({
-            user_id: userId,
-            portfolio_id: portfolioId || null,
-            insights: data.insights,
-            updated_at: new Date().toISOString(),
-          })
-        }
+
+      if (data.error) {
+        setDisplayMessages(m => [...m, { role: 'assistant', text: '⚠️ ה-AI לא הצליח לנתח: ' + data.error }])
+        return
       }
-    } catch (err) {
-      console.error('שגיאה בעדכון פרופיל סוחר', err)
+
+      if (!data.insights) {
+        setDisplayMessages(m => [...m, { role: 'assistant', text: '⚠️ ה-AI לא החזיר ניתוח (תשובה ריקה)' }])
+        return
+      }
+
+      let saveError = null
+      if (existingProfile?.id) {
+        const { error } = await supabase.from('trader_profile').update({ insights: data.insights, updated_at: new Date().toISOString() }).eq('id', existingProfile.id)
+        saveError = error
+      } else {
+        const { error } = await supabase.from('trader_profile').insert({
+          user_id: userId,
+          portfolio_id: portfolioId || null,
+          insights: data.insights,
+          updated_at: new Date().toISOString(),
+        })
+        saveError = error
+      }
+
+      if (saveError) {
+        setDisplayMessages(m => [...m, { role: 'assistant', text: '⚠️ הניתוח הצליח אבל השמירה נכשלה: ' + saveError.message }])
+      } else {
+        setDisplayMessages(m => [...m, { role: 'assistant', text: '✅ האפיון עודכן בהצלחה! תראה אותו למעלה בדשבורד.' }])
+      }
+    } catch (err: any) {
+      setDisplayMessages(m => [...m, { role: 'assistant', text: '⚠️ שגיאת רשת בעת הניתוח: ' + (err.message || 'לא ידועה') }])
     }
   }
 
