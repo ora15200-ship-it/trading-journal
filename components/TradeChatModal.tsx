@@ -3,7 +3,11 @@
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 
-type ChatMessage = { role: 'user' | 'assistant'; text: string }
+type DisplayMessage = { role: 'user' | 'assistant'; text: string; imagePreview?: string }
+type ApiContentBlock =
+  | { type: 'text'; text: string }
+  | { type: 'image'; source: { type: 'base64'; media_type: string; data: string } }
+type ApiMessage = { role: 'user' | 'assistant'; content: string | ApiContentBlock[] }
 
 type ParsedTrade = {
   date: string
@@ -27,47 +31,107 @@ export default function TradeChatModal({
   onTradeAdded: () => void
   portfolioId: string | null
 }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'assistant', text: 'היי! תאר/י לי את העסקה במילים שלך — סימול, כיוון, מחיר כניסה, סטופ, יעד, וכל מה שתרצה. אני אסדר את זה ביומן 🙂' },
+  const [displayMessages, setDisplayMessages] = useState<DisplayMessage[]>([
+    { role: 'assistant', text: 'היי! תאר/י לי את העסקה במילים שלך, או צרף/י צילום מסך של העסקה — אני אסדר את זה ביומן 🙂' },
   ])
+  const [apiMessages, setApiMessages] = useState<ApiMessage[]>([])
   const [input, setInput] = useState('')
+  const [attachedImage, setAttachedImage] = useState<{ data: string; mediaType: string; preview: string } | null>(null)
   const [loading, setLoading] = useState(false)
   const [pendingTrade, setPendingTrade] = useState<ParsedTrade | null>(null)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
-  }, [messages, pendingTrade])
+  }, [displayMessages, pendingTrade])
+
+  const readFileAsBase64 = (file: File): Promise<{ data: string; mediaType: string }> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const result = reader.result as string
+        resolve({ data: result.split(',')[1], mediaType: file.type })
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      alert('כרגע נתמכות רק תמונות (PNG / JPG)')
+      return
+    }
+    const { data, mediaType } = await readFileAsBase64(file)
+    setAttachedImage({ data, mediaType, preview: URL.createObjectURL(file) })
+    e.target.value = ''
+  }
+
+  const handlePaste = async (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const items = e.clipboardData?.items
+    if (!items) return
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile()
+        if (file) {
+          const { data, mediaType } = await readFileAsBase64(file)
+          setAttachedImage({ data, mediaType, preview: URL.createObjectURL(file) })
+        }
+      }
+    }
+  }
 
   const handleSend = async () => {
-    if (!input.trim() || loading) return
-    const newMessages = [...messages, { role: 'user' as const, text: input.trim() }]
-    setMessages(newMessages)
+    if ((!input.trim() && !attachedImage) || loading) return
+
+    const userText = input.trim() || (attachedImage ? 'נתח את התמונה הזו וחלץ את פרטי העסקה' : '')
+
+    const newDisplayMessages: DisplayMessage[] = [
+      ...displayMessages,
+      { role: 'user', text: userText, imagePreview: attachedImage?.preview },
+    ]
+    setDisplayMessages(newDisplayMessages)
+
+    const userContent: ApiContentBlock[] = []
+    if (attachedImage) {
+      userContent.push({ type: 'image', source: { type: 'base64', media_type: attachedImage.mediaType, data: attachedImage.data } })
+    }
+    userContent.push({ type: 'text', text: userText })
+
+    const newApiMessages: ApiMessage[] = [...apiMessages, { role: 'user', content: userContent }]
+    setApiMessages(newApiMessages)
+
     setInput('')
+    setAttachedImage(null)
     setLoading(true)
 
     try {
       const res = await fetch('/api/trade-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: newMessages.map(m => ({ role: m.role, content: m.text })),
-        }),
+        body: JSON.stringify({ messages: newApiMessages }),
       })
       const data = await res.json()
 
       if (data.error) {
-        setMessages(m => [...m, { role: 'assistant', text: 'משהו השתבש: ' + data.error }])
+        setDisplayMessages(m => [...m, { role: 'assistant', text: 'משהו השתבש: ' + data.error }])
       } else if (data.type === 'trade_ready') {
         setPendingTrade(data.trade)
-        if (data.assistantText) setMessages(m => [...m, { role: 'assistant', text: data.assistantText }])
+        if (data.assistantText) {
+          setDisplayMessages(m => [...m, { role: 'assistant', text: data.assistantText }])
+          setApiMessages(m => [...m, { role: 'assistant', content: data.assistantText }])
+        }
       } else {
-        setMessages(m => [...m, { role: 'assistant', text: data.text }])
+        setDisplayMessages(m => [...m, { role: 'assistant', text: data.text }])
+        setApiMessages(m => [...m, { role: 'assistant', content: data.text }])
       }
     } catch {
-      setMessages(m => [...m, { role: 'assistant', text: 'שגיאת רשת, נסה שוב.' }])
+      setDisplayMessages(m => [...m, { role: 'assistant', text: 'שגיאת רשת, נסה שוב.' }])
     }
     setLoading(false)
   }
@@ -115,14 +179,14 @@ export default function TradeChatModal({
     }])
 
     if (error) {
-      setMessages(m => [...m, { role: 'assistant', text: 'שגיאה בשמירה: ' + error.message }])
+      setDisplayMessages(m => [...m, { role: 'assistant', text: 'שגיאה בשמירה: ' + error.message }])
       setSaving(false)
       return
     }
 
     setSaved(true)
     setSaving(false)
-    setMessages(m => [...m, { role: 'assistant', text: `✅ העסקה ב-${pendingTrade.symbol} נשמרה ביומן. מעדכן את האפיון שלך...` }])
+    setDisplayMessages(m => [...m, { role: 'assistant', text: `✅ העסקה ב-${pendingTrade.symbol} נשמרה ביומן. מעדכן את האפיון שלך...` }])
 
     updateTraderProfile(user.id)
     onTradeAdded()
@@ -165,8 +229,10 @@ export default function TradeChatModal({
   const handleAddAnother = () => {
     setPendingTrade(null)
     setSaved(false)
-    setMessages(m => [...m, { role: 'assistant', text: 'מעולה, ספר/י לי על העסקה הבאה 👇' }])
+    setDisplayMessages(m => [...m, { role: 'assistant', text: 'מעולה, ספר/י לי על העסקה הבאה 👇' }])
   }
+
+  const inputDisabled = loading || (!!pendingTrade && !saved)
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={onClose}>
@@ -177,11 +243,14 @@ export default function TradeChatModal({
         </div>
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">
-          {messages.map((m, i) => (
+          {displayMessages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[85%] rounded-xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
                 m.role === 'user' ? 'bg-gray-800 text-gray-100' : 'bg-emerald-600/20 border border-emerald-700/50 text-emerald-50'
               }`}>
+                {m.imagePreview && (
+                  <img src={m.imagePreview} alt="תמונה שצורפה" className="rounded-lg mb-2 max-h-40 object-contain border border-gray-700" />
+                )}
                 {m.text}
               </div>
             </div>
@@ -255,19 +324,37 @@ export default function TradeChatModal({
           )}
         </div>
 
+        {attachedImage && (
+          <div className="px-5 pt-3 flex items-center gap-2">
+            <img src={attachedImage.preview} alt="תצוגה מקדימה" className="h-12 w-12 object-cover rounded border border-gray-700" />
+            <span className="text-xs text-gray-400">תמונה מצורפת</span>
+            <button onClick={() => setAttachedImage(null)} className="text-xs text-red-400 hover:text-red-300 mr-auto">הסר ✕</button>
+          </div>
+        )}
+
         <div className="px-5 py-4 border-t border-gray-800 flex gap-2">
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={inputDisabled}
+            title="צרף תמונה"
+            className="bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-white px-3 rounded-lg transition-colors"
+          >
+            📎
+          </button>
           <input
             type="text"
             value={input}
             onChange={e => setInput(e.target.value)}
+            onPaste={handlePaste}
             onKeyDown={e => e.key === 'Enter' && handleSend()}
-            placeholder="תאר/י את העסקה..."
-            disabled={loading || (!!pendingTrade && !saved)}
+            placeholder="תאר/י את העסקה, או הדבק/צרף תמונה..."
+            disabled={inputDisabled}
             className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500 disabled:opacity-50"
           />
           <button
             onClick={handleSend}
-            disabled={loading || !input.trim() || (!!pendingTrade && !saved)}
+            disabled={inputDisabled || (!input.trim() && !attachedImage)}
             className="bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-700 disabled:text-gray-500 text-white px-5 rounded-lg font-medium transition-colors"
           >
             שלח
