@@ -42,7 +42,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/portfolios', request.url))
   }
 
-  if (user && request.nextUrl.pathname === '/dashboard') {
+  if (user && request.nextUrl.pathname === '/dashboard' && !request.nextUrl.searchParams.get('portfolio')) {
     return NextResponse.redirect(new URL('/portfolios', request.url))
   }
 
