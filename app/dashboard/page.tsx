@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
+import TradeChatModal from '@/components/TradeChatModal'
 
 type Trade = {
   id: string
@@ -35,6 +36,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [lightboxTrade, setLightboxTrade] = useState<{ image: string; notes: string | null; symbol: string } | null>(null)
+  const [showChatModal, setShowChatModal] = useState(false)
+  const [insights, setInsights] = useState<string | null>(null)
 
   const getPortfolioId = () => {
     const params = new URLSearchParams(window.location.search)
@@ -65,7 +68,18 @@ export default function DashboardPage() {
     setLoading(false)
   }
 
-  useEffect(() => { fetchTrades() }, [])
+  const fetchInsights = async () => {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data } = await supabase.from('trader_profile').select('insights').eq('user_id', user.id).maybeSingle()
+    setInsights(data?.insights || null)
+  }
+
+  useEffect(() => {
+    fetchTrades()
+    fetchInsights()
+  }, [])
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -163,17 +177,20 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {insights && (
+          <div className="bg-gray-900 rounded-xl border border-emerald-800/40 p-5 mb-6 whitespace-pre-wrap text-sm text-gray-200 leading-relaxed">
+            {insights}
+          </div>
+        )}
+
         <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 overflow-x-auto">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-lg font-semibold">הטריידים שלי</h2>
             <div className="flex gap-2">
               <button
-                onClick={() => {
-                  const pid = new URLSearchParams(window.location.search).get('portfolio')
-                  window.location.href = pid ? `/dashboard/import?portfolio=${pid}` : '/dashboard/import'
-                }}
+                onClick={() => setShowChatModal(true)}
                 className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                📥 ייבוא
+                🤖 צ'אט בוט
               </button>
               <Link href={newTradeUrl} className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
                 + טרייד חדש
@@ -262,6 +279,14 @@ export default function DashboardPage() {
           )}
         </div>
       </main>
+
+      {showChatModal && (
+        <TradeChatModal
+          onClose={() => setShowChatModal(false)}
+          onTradeAdded={() => { fetchTrades(); fetchInsights() }}
+          portfolioId={portfolioId}
+        />
+      )}
     </div>
   )
 }
