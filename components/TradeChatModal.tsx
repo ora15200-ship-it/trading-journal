@@ -207,18 +207,24 @@ export default function TradeChatModal({
 
   const updateTraderProfile = async (userId: string) => {
     const supabase = createClient()
-    const { data: allTrades } = await supabase
+
+    let tradesQuery = supabase
       .from('trades')
       .select('date, symbol, direction, entry_price, stop_loss, take_profit, risk_amount, risk_reward, result, setup, notes')
       .eq('user_id', userId)
       .order('date', { ascending: false })
       .limit(100)
 
-    const { data: existingProfile } = await supabase
-      .from('trader_profile')
-      .select('insights')
-      .eq('user_id', userId)
-      .maybeSingle()
+    tradesQuery = portfolioId ? tradesQuery.eq('portfolio_id', portfolioId) : tradesQuery.is('portfolio_id', null)
+    const { data: allTrades } = await tradesQuery
+
+    if (!allTrades || allTrades.length === 0) {
+      return
+    }
+
+    let profileQuery = supabase.from('trader_profile').select('id, insights').eq('user_id', userId)
+    profileQuery = portfolioId ? profileQuery.eq('portfolio_id', portfolioId) : profileQuery.is('portfolio_id', null)
+    const { data: existingProfile } = await profileQuery.maybeSingle()
 
     try {
       const res = await fetch('/api/trader-coach', {
@@ -228,11 +234,16 @@ export default function TradeChatModal({
       })
       const data = await res.json()
       if (data.insights) {
-        await supabase.from('trader_profile').upsert({
-          user_id: userId,
-          insights: data.insights,
-          updated_at: new Date().toISOString(),
-        })
+        if (existingProfile?.id) {
+          await supabase.from('trader_profile').update({ insights: data.insights, updated_at: new Date().toISOString() }).eq('id', existingProfile.id)
+        } else {
+          await supabase.from('trader_profile').insert({
+            user_id: userId,
+            portfolio_id: portfolioId || null,
+            insights: data.insights,
+            updated_at: new Date().toISOString(),
+          })
+        }
       }
     } catch (err) {
       console.error('שגיאה בעדכון פרופיל סוחר', err)

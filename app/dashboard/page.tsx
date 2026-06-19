@@ -72,7 +72,10 @@ export default function DashboardPage() {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    const { data } = await supabase.from('trader_profile').select('insights').eq('user_id', user.id).maybeSingle()
+    const pid = getPortfolioId()
+    let query = supabase.from('trader_profile').select('insights').eq('user_id', user.id)
+    query = pid ? query.eq('portfolio_id', pid) : query.is('portfolio_id', null)
+    const { data } = await query.maybeSingle()
     setInsights(data?.insights || null)
   }
 
