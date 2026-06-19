@@ -206,38 +206,49 @@ export default function TradeChatModal({
   }
 
   const updateTraderProfile = async (userId: string) => {
-    const supabase = createClient()
-
-    let tradesQuery = supabase
-      .from('trades')
-      .select('date, symbol, direction, entry_price, stop_loss, take_profit, risk_amount, risk_reward, result, setup, notes')
-      .eq('user_id', userId)
-      .order('date', { ascending: false })
-      .limit(100)
-
-    tradesQuery = portfolioId ? tradesQuery.eq('portfolio_id', portfolioId) : tradesQuery.is('portfolio_id', null)
-    const { data: allTrades, error: tradesError } = await tradesQuery
-
-    if (tradesError) {
-      setDisplayMessages(m => [...m, { role: 'assistant', text: '⚠️ לא הצלחתי לקרוא את העסקאות לניתוח: ' + tradesError.message }])
-      return
-    }
-
-    if (!allTrades || allTrades.length === 0) {
-      setDisplayMessages(m => [...m, { role: 'assistant', text: '⚠️ לא נמצאו עסקאות בתיק הזה לניתוח' }])
-      return
-    }
-
-    let profileQuery = supabase.from('trader_profile').select('id, insights').eq('user_id', userId)
-    profileQuery = portfolioId ? profileQuery.eq('portfolio_id', portfolioId) : profileQuery.is('portfolio_id', null)
-    const { data: existingProfile, error: profileError } = await profileQuery.maybeSingle()
-
-    if (profileError) {
-      setDisplayMessages(m => [...m, { role: 'assistant', text: '⚠️ שגיאה בקריאת פרופיל קיים: ' + profileError.message }])
-      return
-    }
-
     try {
+      setDisplayMessages(m => [...m, { role: 'assistant', text: '🔄 בודק עסקאות לניתוח...' }])
+
+      const supabase = createClient()
+
+      let tradesQuery = supabase
+        .from('trades')
+        .select('date, symbol, direction, entry_price, stop_loss, take_profit, risk_amount, risk_reward, result, setup, notes')
+        .eq('user_id', userId)
+
+      if (portfolioId) {
+        tradesQuery = tradesQuery.eq('portfolio_id', portfolioId)
+      } else {
+        tradesQuery = tradesQuery.is('portfolio_id', null)
+      }
+
+      tradesQuery = tradesQuery.order('date', { ascending: false }).limit(100)
+
+      const { data: allTrades, error: tradesError } = await tradesQuery
+
+      if (tradesError) {
+        setDisplayMessages(m => [...m, { role: 'assistant', text: '⚠️ שלב 1 נכשל (קריאת עסקאות): ' + tradesError.message }])
+        return
+      }
+
+      if (!allTrades || allTrades.length === 0) {
+        setDisplayMessages(m => [...m, { role: 'assistant', text: '⚠️ לא נמצאו עסקאות בתיק הזה' }])
+        return
+      }
+
+      setDisplayMessages(m => [...m, { role: 'assistant', text: `🔄 נמצאו ${allTrades.length} עסקאות, בודק פרופיל קיים...` }])
+
+      let profileQuery = supabase.from('trader_profile').select('id, insights').eq('user_id', userId)
+      profileQuery = portfolioId ? profileQuery.eq('portfolio_id', portfolioId) : profileQuery.is('portfolio_id', null)
+      const { data: existingProfile, error: profileError } = await profileQuery.maybeSingle()
+
+      if (profileError) {
+        setDisplayMessages(m => [...m, { role: 'assistant', text: '⚠️ שלב 2 נכשל (קריאת פרופיל): ' + profileError.message }])
+        return
+      }
+
+      setDisplayMessages(m => [...m, { role: 'assistant', text: '🔄 שולח ל-AI לניתוח...' }])
+
       const res = await fetch('/api/trader-coach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -246,14 +257,16 @@ export default function TradeChatModal({
       const data = await res.json()
 
       if (data.error) {
-        setDisplayMessages(m => [...m, { role: 'assistant', text: '⚠️ ה-AI לא הצליח לנתח: ' + data.error }])
+        setDisplayMessages(m => [...m, { role: 'assistant', text: '⚠️ שלב 3 נכשל (תשובת AI): ' + data.error }])
         return
       }
 
       if (!data.insights) {
-        setDisplayMessages(m => [...m, { role: 'assistant', text: '⚠️ ה-AI לא החזיר ניתוח (תשובה ריקה)' }])
+        setDisplayMessages(m => [...m, { role: 'assistant', text: '⚠️ ה-AI החזיר תשובה ריקה' }])
         return
       }
+
+      setDisplayMessages(m => [...m, { role: 'assistant', text: `🔄 שומר אפיון (portfolioId: ${portfolioId || 'ללא תיק'})...` }])
 
       let saveError = null
       if (existingProfile?.id) {
@@ -270,12 +283,12 @@ export default function TradeChatModal({
       }
 
       if (saveError) {
-        setDisplayMessages(m => [...m, { role: 'assistant', text: '⚠️ הניתוח הצליח אבל השמירה נכשלה: ' + saveError.message }])
+        setDisplayMessages(m => [...m, { role: 'assistant', text: '⚠️ שלב 4 נכשל (שמירה): ' + saveError.message }])
       } else {
         setDisplayMessages(m => [...m, { role: 'assistant', text: '✅ האפיון עודכן בהצלחה! תראה אותו למעלה בדשבורד.' }])
       }
     } catch (err: any) {
-      setDisplayMessages(m => [...m, { role: 'assistant', text: '⚠️ שגיאת רשת בעת הניתוח: ' + (err.message || 'לא ידועה') }])
+      setDisplayMessages(m => [...m, { role: 'assistant', text: '💥 קריסה כללית בניתוח: ' + (err?.message || String(err)) }])
     }
   }
 
