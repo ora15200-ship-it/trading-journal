@@ -1,0 +1,7 @@
+<svg width="220" height="56" viewBox="0 0 220 56" xmlns="http://www.w3.org/2000/svg">
+  <path d="M28 6 A22 22 0 1 1 13.7 14.3" fill="none" stroke="#6FA98A" stroke-width="5" stroke-linecap="round"/>
+  <polyline points="15,40 24,33 30,36 40,20" fill="none" stroke="#F7F6F2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="64" y="36" font-family="Heebo, Arial, sans-serif" font-size="26" font-weight="700">
+    <tspan fill="#6FA98A">Zen</tspan><tspan fill="#F7F6F2">Stock</tspan>
+  </text>
+</svg>
