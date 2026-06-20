@@ -16,7 +16,7 @@ export default function HomePage() {
             </Link>
           </nav>
           <Link
-            href="/signup"
+            href="/login"
             className="rounded-md bg-zen-sage px-5 py-2 text-sm font-semibold text-zen-charcoal transition-opacity hover:opacity-90"
           >
             הרשמה חינם
@@ -59,7 +59,7 @@ export default function HomePage() {
 
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link
-              href="/signup"
+              href="/login"
               className="w-full rounded-md bg-zen-charcoal px-7 py-3 text-sm font-semibold text-zen-cream transition-opacity hover:opacity-90 sm:w-auto"
             >
               התחל לתעד בחינם

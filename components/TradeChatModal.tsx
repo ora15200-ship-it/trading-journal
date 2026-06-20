@@ -23,6 +23,27 @@ type ParsedTrade = {
   result: number | null
 }
 
+function ZenBotIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 56 56" className={className} fill="none">
+      <path
+        d="M28 6 A22 22 0 1 1 13.7 14.3"
+        stroke="currentColor"
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+      <polyline
+        points="15,40 24,33 30,36 40,20"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity="0.55"
+      />
+    </svg>
+  )
+}
+
 export default function TradeChatModal({
   onClose,
   onTradeAdded,
@@ -33,7 +54,7 @@ export default function TradeChatModal({
   portfolioId: string | null
 }) {
   const [displayMessages, setDisplayMessages] = useState<DisplayMessage[]>([
-    { role: 'assistant', text: 'היי! תאר/י לי עסקה, או צרף/י תמונה (אפילו עם כמה עסקאות בבת אחת) — אני אסדר את זה ביומן 🙂' },
+    { role: 'assistant', text: 'היי, אני ZEN Bot. תאר/י לי עסקה, או צרף/י תמונה (אפילו עם כמה עסקאות בבת אחת) — אני אסדר את זה ביומן.' },
   ])
   const [apiMessages, setApiMessages] = useState<ApiMessage[]>([])
   const [input, setInput] = useState('')
@@ -199,7 +220,7 @@ export default function TradeChatModal({
 
     setSaved(true)
     setSaving(false)
-    setDisplayMessages(m => [...m, { role: 'assistant', text: `✅ נשמרו ${rows.length} עסקאות ביומן. מעדכן את האפיון שלך...` }])
+    setDisplayMessages(m => [...m, { role: 'assistant', text: `נשמרו ${rows.length} עסקאות ביומן. מעדכן את האפיון שלך...` }])
 
     updateTraderProfile(user.id)
     onTradeAdded()
@@ -207,7 +228,7 @@ export default function TradeChatModal({
 
   const updateTraderProfile = async (userId: string) => {
     try {
-      setDisplayMessages(m => [...m, { role: 'assistant', text: '🔄 בודק עסקאות לניתוח...' }])
+      setDisplayMessages(m => [...m, { role: 'assistant', text: 'בודק עסקאות לניתוח...' }])
 
       const supabase = createClient()
 
@@ -227,27 +248,27 @@ export default function TradeChatModal({
       const { data: allTrades, error: tradesError } = await tradesQuery
 
       if (tradesError) {
-        setDisplayMessages(m => [...m, { role: 'assistant', text: '⚠️ שלב 1 נכשל (קריאת עסקאות): ' + tradesError.message }])
+        setDisplayMessages(m => [...m, { role: 'assistant', text: 'שלב 1 נכשל (קריאת עסקאות): ' + tradesError.message }])
         return
       }
 
       if (!allTrades || allTrades.length === 0) {
-        setDisplayMessages(m => [...m, { role: 'assistant', text: '⚠️ לא נמצאו עסקאות בתיק הזה' }])
+        setDisplayMessages(m => [...m, { role: 'assistant', text: 'לא נמצאו עסקאות בתיק הזה' }])
         return
       }
 
-      setDisplayMessages(m => [...m, { role: 'assistant', text: `🔄 נמצאו ${allTrades.length} עסקאות, בודק פרופיל קיים...` }])
+      setDisplayMessages(m => [...m, { role: 'assistant', text: `נמצאו ${allTrades.length} עסקאות, בודק פרופיל קיים...` }])
 
       let profileQuery = supabase.from('trader_profile').select('id, insights').eq('user_id', userId)
       profileQuery = portfolioId ? profileQuery.eq('portfolio_id', portfolioId) : profileQuery.is('portfolio_id', null)
       const { data: existingProfile, error: profileError } = await profileQuery.maybeSingle()
 
       if (profileError) {
-        setDisplayMessages(m => [...m, { role: 'assistant', text: '⚠️ שלב 2 נכשל (קריאת פרופיל): ' + profileError.message }])
+        setDisplayMessages(m => [...m, { role: 'assistant', text: 'שלב 2 נכשל (קריאת פרופיל): ' + profileError.message }])
         return
       }
 
-      setDisplayMessages(m => [...m, { role: 'assistant', text: '🔄 שולח ל-AI לניתוח...' }])
+      setDisplayMessages(m => [...m, { role: 'assistant', text: 'שולח ל-AI לניתוח...' }])
 
       const res = await fetch('/api/trader-coach', {
         method: 'POST',
@@ -257,16 +278,16 @@ export default function TradeChatModal({
       const data = await res.json()
 
       if (data.error) {
-        setDisplayMessages(m => [...m, { role: 'assistant', text: '⚠️ שלב 3 נכשל (תשובת AI): ' + data.error }])
+        setDisplayMessages(m => [...m, { role: 'assistant', text: 'שלב 3 נכשל (תשובת AI): ' + data.error }])
         return
       }
 
       if (!data.insights) {
-        setDisplayMessages(m => [...m, { role: 'assistant', text: '⚠️ ה-AI החזיר תשובה ריקה' }])
+        setDisplayMessages(m => [...m, { role: 'assistant', text: 'ה-AI החזיר תשובה ריקה' }])
         return
       }
 
-      setDisplayMessages(m => [...m, { role: 'assistant', text: `🔄 שומר אפיון (portfolioId: ${portfolioId || 'ללא תיק'})...` }])
+      setDisplayMessages(m => [...m, { role: 'assistant', text: `שומר אפיון (portfolioId: ${portfolioId || 'ללא תיק'})...` }])
 
       let saveError = null
       if (existingProfile?.id) {
@@ -283,39 +304,42 @@ export default function TradeChatModal({
       }
 
       if (saveError) {
-        setDisplayMessages(m => [...m, { role: 'assistant', text: '⚠️ שלב 4 נכשל (שמירה): ' + saveError.message }])
+        setDisplayMessages(m => [...m, { role: 'assistant', text: 'שלב 4 נכשל (שמירה): ' + saveError.message }])
       } else {
-        setDisplayMessages(m => [...m, { role: 'assistant', text: '✅ האפיון עודכן בהצלחה! תראה אותו למעלה בדשבורד.' }])
+        setDisplayMessages(m => [...m, { role: 'assistant', text: 'האפיון עודכן בהצלחה! תראה אותו למעלה בדשבורד.' }])
       }
     } catch (err: any) {
-      setDisplayMessages(m => [...m, { role: 'assistant', text: '💥 קריסה כללית בניתוח: ' + (err?.message || String(err)) }])
+      setDisplayMessages(m => [...m, { role: 'assistant', text: 'קריסה כללית בניתוח: ' + (err?.message || String(err)) }])
     }
   }
 
   const handleAddAnother = () => {
     setPendingTrades(null)
     setSaved(false)
-    setDisplayMessages(m => [...m, { role: 'assistant', text: 'מעולה, ספר/י לי על העסקה הבאה 👇' }])
+    setDisplayMessages(m => [...m, { role: 'assistant', text: 'מעולה, ספר/י לי על העסקה הבאה.' }])
   }
 
   const inputDisabled = loading || (!!pendingTrades && !saved)
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-gray-900 rounded-2xl border border-gray-700 w-full max-w-2xl h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
-        <div className="flex justify-between items-center px-5 py-4 border-b border-gray-800">
-          <h3 className="font-bold text-emerald-400 flex items-center gap-2">🤖 צ'אט בוט - הוספת עסקה</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-xl">✕</button>
+      <div className="bg-zen-charcoal rounded-2xl border border-white/10 w-full max-w-2xl h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex justify-between items-center px-5 py-4 border-b border-white/10">
+          <h3 className="font-semibold text-zen-sage flex items-center gap-2">
+            <ZenBotIcon className="h-5 w-5" />
+            ZEN Bot · הוספת עסקה
+          </h3>
+          <button onClick={onClose} className="text-zen-cream/50 hover:text-zen-cream text-xl">✕</button>
         </div>
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">
           {displayMessages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[85%] rounded-xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
-                m.role === 'user' ? 'bg-gray-800 text-gray-100' : 'bg-emerald-600/20 border border-emerald-700/50 text-emerald-50'
+                m.role === 'user' ? 'bg-white/10 text-zen-cream' : 'bg-zen-sage/15 border border-zen-sage/30 text-zen-cream'
               }`}>
                 {m.imagePreview && (
-                  <img src={m.imagePreview} alt="תמונה שצורפה" className="rounded-lg mb-2 max-h-40 object-contain border border-gray-700" />
+                  <img src={m.imagePreview} alt="תמונה שצורפה" className="rounded-lg mb-2 max-h-40 object-contain border border-white/10" />
                 )}
                 {m.text}
               </div>
@@ -324,79 +348,79 @@ export default function TradeChatModal({
 
           {loading && (
             <div className="flex justify-start">
-              <div className="bg-emerald-600/20 border border-emerald-700/50 rounded-xl px-4 py-2.5 text-sm text-emerald-200">
+              <div className="bg-zen-sage/15 border border-zen-sage/30 rounded-xl px-4 py-2.5 text-sm text-zen-cream">
                 <span className="animate-pulse">חושב...</span>
               </div>
             </div>
           )}
 
           {pendingTrades && !saved && (
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 mt-1">
-              <p className="text-xs text-gray-400 mb-3">
+            <div className="bg-white/5 border border-white/10 rounded-xl p-4 mt-1">
+              <p className="text-xs text-zen-cream/50 mb-3">
                 זיהיתי {pendingTrades.length} עסק{pendingTrades.length === 1 ? 'ה' : 'אות'} — אפשר לערוך או להוריד לפני שמירה:
               </p>
 
               <div className="flex flex-col gap-3">
                 {pendingTrades.map((t, i) => (
-                  <div key={i} className="bg-gray-900 border border-gray-700 rounded-lg p-3">
+                  <div key={i} className="bg-zen-charcoal border border-white/10 rounded-lg p-3">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs text-gray-500">עסקה {i + 1}</span>
+                      <span className="text-xs text-zen-cream/40">עסקה {i + 1}</span>
                       <button onClick={() => removeTrade(i)} className="text-xs text-red-400 hover:text-red-300">✕ הסר</button>
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-sm">
                       <label className="flex flex-col gap-1">
-                        <span className="text-xs text-gray-500">תאריך</span>
-                        <input type="date" value={t.date} onChange={e => updateTradeField(i, 'date', e.target.value)} className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-xs" />
+                        <span className="text-xs text-zen-cream/40">תאריך</span>
+                        <input type="date" value={t.date} onChange={e => updateTradeField(i, 'date', e.target.value)} className="bg-white/5 border border-white/10 rounded px-2 py-1 text-zen-cream text-xs" />
                       </label>
                       <label className="flex flex-col gap-1">
-                        <span className="text-xs text-gray-500">סימול</span>
-                        <input type="text" value={t.symbol} onChange={e => updateTradeField(i, 'symbol', e.target.value)} className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-xs" />
+                        <span className="text-xs text-zen-cream/40">סימול</span>
+                        <input type="text" value={t.symbol} onChange={e => updateTradeField(i, 'symbol', e.target.value)} className="bg-white/5 border border-white/10 rounded px-2 py-1 text-zen-cream text-xs" />
                       </label>
                       <label className="flex flex-col gap-1">
-                        <span className="text-xs text-gray-500">כיוון</span>
-                        <select value={t.direction} onChange={e => updateTradeField(i, 'direction', e.target.value)} className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-xs">
+                        <span className="text-xs text-zen-cream/40">כיוון</span>
+                        <select value={t.direction} onChange={e => updateTradeField(i, 'direction', e.target.value)} className="bg-white/5 border border-white/10 rounded px-2 py-1 text-zen-cream text-xs">
                           <option value="long">לונג</option>
                           <option value="short">שורט</option>
                         </select>
                       </label>
                       <label className="flex flex-col gap-1">
-                        <span className="text-xs text-gray-500">כניסה</span>
-                        <input type="number" step="0.01" value={t.entry_price} onChange={e => updateTradeField(i, 'entry_price', parseFloat(e.target.value))} className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-xs" />
+                        <span className="text-xs text-zen-cream/40">כניסה</span>
+                        <input type="number" step="0.01" value={t.entry_price} onChange={e => updateTradeField(i, 'entry_price', parseFloat(e.target.value))} className="bg-white/5 border border-white/10 rounded px-2 py-1 text-zen-cream text-xs" />
                       </label>
                       <label className="flex flex-col gap-1">
-                        <span className="text-xs text-gray-500">כמות</span>
-                        <input type="number" step="0.0001" value={t.shares ?? ''} onChange={e => updateTradeField(i, 'shares', e.target.value ? parseFloat(e.target.value) : null)} className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-xs" />
+                        <span className="text-xs text-zen-cream/40">כמות</span>
+                        <input type="number" step="0.0001" value={t.shares ?? ''} onChange={e => updateTradeField(i, 'shares', e.target.value ? parseFloat(e.target.value) : null)} className="bg-white/5 border border-white/10 rounded px-2 py-1 text-zen-cream text-xs" />
                       </label>
                       <label className="flex flex-col gap-1">
-                        <span className="text-xs text-gray-500">תוצאה ($)</span>
-                        <input type="number" step="0.01" value={t.result ?? ''} onChange={e => updateTradeField(i, 'result', e.target.value ? parseFloat(e.target.value) : null)} className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-xs" />
+                        <span className="text-xs text-zen-cream/40">תוצאה ($)</span>
+                        <input type="number" step="0.01" value={t.result ?? ''} onChange={e => updateTradeField(i, 'result', e.target.value ? parseFloat(e.target.value) : null)} className="bg-white/5 border border-white/10 rounded px-2 py-1 text-zen-cream text-xs" />
                       </label>
                       <label className="flex flex-col gap-1">
                         <span className="text-xs text-red-400">S.L</span>
-                        <input type="number" step="0.01" value={t.stop_loss ?? ''} onChange={e => updateTradeField(i, 'stop_loss', e.target.value ? parseFloat(e.target.value) : null)} className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-xs" />
+                        <input type="number" step="0.01" value={t.stop_loss ?? ''} onChange={e => updateTradeField(i, 'stop_loss', e.target.value ? parseFloat(e.target.value) : null)} className="bg-white/5 border border-white/10 rounded px-2 py-1 text-zen-cream text-xs" />
                       </label>
                       <label className="flex flex-col gap-1">
-                        <span className="text-xs text-emerald-400">T.P</span>
-                        <input type="number" step="0.01" value={t.take_profit ?? ''} onChange={e => updateTradeField(i, 'take_profit', e.target.value ? parseFloat(e.target.value) : null)} className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-xs" />
+                        <span className="text-xs text-zen-sage">T.P</span>
+                        <input type="number" step="0.01" value={t.take_profit ?? ''} onChange={e => updateTradeField(i, 'take_profit', e.target.value ? parseFloat(e.target.value) : null)} className="bg-white/5 border border-white/10 rounded px-2 py-1 text-zen-cream text-xs" />
                       </label>
                       <label className="flex flex-col gap-1">
-                        <span className="text-xs text-gray-500">Setup</span>
-                        <input type="text" value={t.setup ?? ''} onChange={e => updateTradeField(i, 'setup', e.target.value)} className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-xs" />
+                        <span className="text-xs text-zen-cream/40">Setup</span>
+                        <input type="text" value={t.setup ?? ''} onChange={e => updateTradeField(i, 'setup', e.target.value)} className="bg-white/5 border border-white/10 rounded px-2 py-1 text-zen-cream text-xs" />
                       </label>
                     </div>
                   </div>
                 ))}
               </div>
 
-              <button onClick={handleConfirmAll} disabled={saving} className="w-full mt-4 bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-700 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors">
-                {saving ? 'שומר...' : `✅ אישור והוספת ${pendingTrades.length} עסק${pendingTrades.length === 1 ? 'ה' : 'אות'} ליומן`}
+              <button onClick={handleConfirmAll} disabled={saving} className="w-full mt-4 bg-zen-sage hover:opacity-90 disabled:opacity-40 text-zen-charcoal font-semibold py-2.5 rounded-lg text-sm transition-opacity">
+                {saving ? 'שומר...' : `אישור והוספת ${pendingTrades.length} עסק${pendingTrades.length === 1 ? 'ה' : 'אות'} ליומן`}
               </button>
             </div>
           )}
 
           {saved && (
             <div className="flex justify-center">
-              <button onClick={handleAddAnother} className="text-xs text-emerald-400 hover:text-emerald-300 underline">
+              <button onClick={handleAddAnother} className="text-xs text-zen-sage hover:opacity-80 underline">
                 + הוסף עסקאות נוספות
               </button>
             </div>
@@ -405,19 +429,19 @@ export default function TradeChatModal({
 
         {attachedImage && (
           <div className="px-5 pt-3 flex items-center gap-2">
-            <img src={attachedImage.preview} alt="תצוגה מקדימה" className="h-12 w-12 object-cover rounded border border-gray-700" />
-            <span className="text-xs text-gray-400">תמונה מצורפת</span>
+            <img src={attachedImage.preview} alt="תצוגה מקדימה" className="h-12 w-12 object-cover rounded border border-white/10" />
+            <span className="text-xs text-zen-cream/50">תמונה מצורפת</span>
             <button onClick={() => setAttachedImage(null)} className="text-xs text-red-400 hover:text-red-300 mr-auto">הסר ✕</button>
           </div>
         )}
 
-        <div className="px-5 py-4 border-t border-gray-800 flex gap-2">
+        <div className="px-5 py-4 border-t border-white/10 flex gap-2">
           <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={inputDisabled}
             title="צרף תמונה"
-            className="bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-white px-3 rounded-lg transition-colors"
+            className="bg-white/5 hover:bg-white/10 disabled:opacity-50 text-zen-cream px-3 rounded-lg transition-colors"
           >
             📎
           </button>
@@ -429,12 +453,12 @@ export default function TradeChatModal({
             onKeyDown={e => e.key === 'Enter' && handleSend()}
             placeholder="תאר/י את העסקה, או הדבק/צרף תמונה..."
             disabled={inputDisabled}
-            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500 disabled:opacity-50"
+            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-zen-cream placeholder-zen-cream/30 focus:outline-none focus:border-zen-sage disabled:opacity-50"
           />
           <button
             onClick={handleSend}
             disabled={inputDisabled || (!input.trim() && !attachedImage)}
-            className="bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-700 disabled:text-gray-500 text-white px-5 rounded-lg font-medium transition-colors"
+            className="bg-zen-sage hover:opacity-90 disabled:opacity-40 text-zen-charcoal px-5 rounded-lg font-medium transition-opacity"
           >
             שלח
           </button>
