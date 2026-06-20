@@ -63,7 +63,6 @@ export default function PortfoliosPage() {
     const { data: portfoliosData } = await supabase.from('portfolios').select('*').order('created_at')
     setPortfolios(portfoliosData || [])
 
-    // שליפת סטטיסטיקות לכל תיק
     const { data: trades } = await supabase.from('trades').select('portfolio_id, result, date')
     const now = new Date()
 
@@ -191,19 +190,19 @@ export default function PortfoliosPage() {
                     <div className="grid grid-cols-2 gap-2 mb-3">
                       <div className="bg-white/5 rounded-lg p-2 text-center">
                         <p className="text-[10px] text-zen-cream/40 mb-0.5">רווח כולל</p>
-                        <p className={`text-sm font-semibold ${s.totalProfit >= 0 ? 'text-zen-sage' : 'text-red-400'}`}>
+                        <p className={`text-sm font-semibold ${s.totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                           {s.totalProfit >= 0 ? '+' : ''}${s.totalProfit.toFixed(0)}
                         </p>
                       </div>
                       <div className="bg-white/5 rounded-lg p-2 text-center">
                         <p className="text-[10px] text-zen-cream/40 mb-0.5">Win Rate</p>
-                        <p className={`text-sm font-semibold ${s.winRate >= 50 ? 'text-zen-sage' : 'text-red-400'}`}>
+                        <p className={`text-sm font-semibold ${s.winRate >= 50 ? 'text-green-400' : 'text-red-400'}`}>
                           {s.winRate}%
                         </p>
                       </div>
                       <div className="bg-white/5 rounded-lg p-2 text-center">
                         <p className="text-[10px] text-zen-cream/40 mb-0.5">החודש</p>
-                        <p className={`text-sm font-semibold ${s.monthProfit >= 0 ? 'text-zen-sage' : 'text-red-400'}`}>
+                        <p className={`text-sm font-semibold ${s.monthProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                           {s.monthProfit >= 0 ? '+' : ''}${s.monthProfit.toFixed(0)}
                         </p>
                       </div>

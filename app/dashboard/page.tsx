@@ -160,11 +160,11 @@ export default function DashboardPage() {
           </div>
           <div className="bg-white/5 rounded-xl p-5 border border-white/10">
             <p className="text-zen-cream/40 text-sm mb-1">Win Rate</p>
-            <p className="text-3xl font-semibold text-zen-sage">{winRate}%</p>
+            <p className="text-3xl font-semibold text-green-400">{winRate}%</p>
           </div>
           <div className="bg-white/5 rounded-xl p-5 border border-white/10">
             <p className="text-zen-cream/40 text-sm mb-1">רווח כולל</p>
-            <p className={`text-3xl font-semibold ${totalProfit >= 0 ? 'text-zen-sage' : 'text-red-400'}`}>
+            <p className={`text-3xl font-semibold ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
               ${totalProfit.toFixed(2)}
             </p>
           </div>
@@ -174,7 +174,7 @@ export default function DashboardPage() {
           </div>
           <div className="bg-white/5 rounded-xl p-5 border border-white/10">
             <p className="text-zen-cream/40 text-sm mb-1">רווח החודש</p>
-            <p className={`text-3xl font-semibold ${monthProfit >= 0 ? 'text-zen-sage' : 'text-red-400'}`}>
+            <p className={`text-3xl font-semibold ${monthProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
               {monthProfit >= 0 ? '+' : ''}${monthProfit.toFixed(2)}
             </p>
           </div>
@@ -241,25 +241,25 @@ export default function DashboardPage() {
                       )}
                     </td>
                     <td className="py-3 pr-2">
-                      {trade.direction === 'long' ? <span className="text-zen-sage font-bold text-lg">↑</span>
+                      {trade.direction === 'long' ? <span className="text-green-400 font-bold text-lg">↑</span>
                         : trade.direction === 'short' ? <span className="text-red-400 font-bold text-lg">↓</span> : '-'}
                     </td>
                     <td className="py-3 pr-2 text-zen-cream/70">{trade.date}</td>
                     <td className="py-3 pr-2 font-semibold text-zen-cream">{trade.symbol}</td>
                     <td className="py-3 pr-2">${trade.entry_price}</td>
                     <td className="py-3 pr-2 text-red-400">{trade.stop_loss ? `$${trade.stop_loss}` : '-'}</td>
-                    <td className="py-3 pr-2 text-zen-sage">{trade.take_profit ? `$${trade.take_profit}` : '-'}</td>
+                    <td className="py-3 pr-2 text-green-400">{trade.take_profit ? `$${trade.take_profit}` : '-'}</td>
                     <td className="py-3 pr-2 text-amber-400">{trade.risk_amount ? `$${trade.risk_amount}` : '-'}</td>
                     <td className="py-3 pr-2">{trade.shares ? Math.round(trade.shares) : '-'}</td>
                     <td className="py-3 pr-2">{trade.position_size ? `$${Math.round(trade.position_size)}` : '-'}</td>
                     <td className="py-3 pr-2">
                       {trade.risk_reward ? (
-                        <span className={trade.risk_reward >= 2 ? 'text-zen-sage' : trade.risk_reward >= 1 ? 'text-amber-400' : 'text-red-400'}>
+                        <span className={trade.risk_reward >= 2 ? 'text-green-400' : trade.risk_reward >= 1 ? 'text-amber-400' : 'text-red-400'}>
                           1:{trade.risk_reward.toFixed(1)}
                         </span>
                       ) : '-'}
                     </td>
-                    <td className={`py-3 pr-2 font-semibold ${trade.result === null ? 'text-zen-cream/40' : trade.result > 0 ? 'text-zen-sage' : 'text-red-400'}`}>
+                    <td className={`py-3 pr-2 font-semibold ${trade.result === null ? 'text-zen-cream/40' : trade.result > 0 ? 'text-green-400' : 'text-red-400'}`}>
                       {trade.result === null ? 'פתוח' : `$${trade.result.toFixed(2)}`}
                     </td>
                     <td className="py-3 pr-2 text-zen-cream/50">{trade.setup || '-'}</td>
