@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 
 export default function LoginPage() {
@@ -8,15 +9,22 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [isSignUp, setIsSignUp] = useState(false)
   const [isForgot, setIsForgot] = useState(false)
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
     setError('')
     setSuccess('')
+
+    if (isSignUp && !isForgot && !agreedToTerms) {
+      setError('יש לאשר את התקנון לפני ההרשמה')
+      return
+    }
+
+    setLoading(true)
 
     const supabase = createClient()
 
@@ -52,60 +60,81 @@ export default function LoginPage() {
     setLoading(false)
   }
 
+  const submitDisabled = loading || (isSignUp && !isForgot && !agreedToTerms)
+
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center px-4">
+    <div className="min-h-screen bg-zen-charcoal text-zen-cream flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-emerald-400 mb-2">יומן מסחר</h1>
-          <p className="text-gray-400">
+          <img src="/logo.svg" alt="ZenStock" className="h-10 w-auto mx-auto mb-4" />
+          <p className="text-zen-cream/60">
             {isForgot ? 'איפוס סיסמה' : isSignUp ? 'צור חשבון חדש' : 'התחבר לחשבון שלך'}
           </p>
         </div>
 
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-8">
+        <div className="bg-white/5 rounded-xl border border-white/10 p-8">
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">אימייל</label>
+              <label className="block text-sm text-zen-cream/50 mb-1">אימייל</label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="your@email.com"
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-zen-cream placeholder-zen-cream/30 focus:outline-none focus:border-zen-sage"
               />
             </div>
 
             {!isForgot && (
               <div>
-                <label className="block text-sm text-gray-400 mb-1">סיסמה</label>
+                <label className="block text-sm text-zen-cream/50 mb-1">סיסמה</label>
                 <input
                   type="password"
                   required
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-zen-cream placeholder-zen-cream/30 focus:outline-none focus:border-zen-sage"
                 />
               </div>
             )}
 
+            {isSignUp && !isForgot && (
+              <label className="flex items-start gap-2 text-sm text-zen-cream/70">
+                <input
+                  type="checkbox"
+                  required
+                  checked={agreedToTerms}
+                  onChange={e => setAgreedToTerms(e.target.checked)}
+                  className="mt-1 accent-zen-sage h-4 w-4"
+                />
+                <span>
+                  קראתי ואני מסכים/ה ל
+                  <Link href="/terms" target="_blank" className="text-zen-sage underline mx-1">
+                    תקנון ולהצהרת האחריות
+                  </Link>
+                  של ZenStock
+                </span>
+              </label>
+            )}
+
             {error && (
-              <div className="bg-red-900/30 border border-red-700 rounded-lg px-4 py-3 text-red-400 text-sm">
+              <div className="bg-red-900/30 border border-red-700/50 rounded-lg px-4 py-3 text-red-300 text-sm">
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="bg-emerald-900/30 border border-emerald-700 rounded-lg px-4 py-3 text-emerald-400 text-sm">
+              <div className="bg-zen-sage/15 border border-zen-sage/40 rounded-lg px-4 py-3 text-zen-sage text-sm">
                 {success}
               </div>
             )}
 
             <button
               type="submit"
-              disabled={loading}
-              className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-700 disabled:text-gray-400 text-white font-semibold py-3 rounded-lg transition-colors"
+              disabled={submitDisabled}
+              className="w-full bg-zen-sage hover:opacity-90 disabled:opacity-40 text-zen-charcoal font-semibold py-3 rounded-lg transition-opacity"
             >
               {loading ? 'טוען...' : isForgot ? 'שלח מייל איפוס' : isSignUp ? 'הרשמה' : 'התחברות'}
             </button>
@@ -115,7 +144,7 @@ export default function LoginPage() {
             {!isForgot && (
               <button
                 onClick={() => { setIsForgot(true); setError(''); setSuccess('') }}
-                className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
+                className="text-sm text-zen-cream/40 hover:text-zen-cream/70 transition-colors"
               >
                 שכחת סיסמה?
               </button>
@@ -123,14 +152,14 @@ export default function LoginPage() {
             {isForgot ? (
               <button
                 onClick={() => { setIsForgot(false); setError(''); setSuccess('') }}
-                className="text-sm text-gray-400 hover:text-emerald-400 transition-colors"
+                className="text-sm text-zen-cream/50 hover:text-zen-sage transition-colors"
               >
                 חזרה להתחברות
               </button>
             ) : (
               <button
                 onClick={() => { setIsSignUp(!isSignUp); setError(''); setSuccess('') }}
-                className="text-sm text-gray-400 hover:text-emerald-400 transition-colors"
+                className="text-sm text-zen-cream/50 hover:text-zen-sage transition-colors"
               >
                 {isSignUp ? 'כבר יש לך חשבון? התחבר' : 'אין לך חשבון? הירשם'}
               </button>
