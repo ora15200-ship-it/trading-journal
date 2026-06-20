@@ -103,89 +103,89 @@ export default function NewTradePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      <nav className="bg-gray-900 border-b border-gray-800 px-6 py-4 flex justify-between items-center">
-        <h1 className="text-xl font-bold text-emerald-400">יומן מסחר</h1>
+    <div className="min-h-screen bg-zen-charcoal text-zen-cream">
+      <nav className="bg-white/5 border-b border-white/10 px-6 py-4 flex justify-between items-center">
+        <img src="/logo.svg" alt="ZenStock" className="h-8 w-auto" />
         <button
           onClick={() => {
             const portfolioId = getPortfolioId()
             window.location.href = portfolioId ? `/dashboard?portfolio=${portfolioId}` : '/dashboard'
           }}
-          className="text-sm text-gray-400 hover:text-white transition-colors">
+          className="text-sm text-zen-cream/50 hover:text-zen-cream transition-colors">
           ← חזרה לדשבורד
         </button>
       </nav>
 
       <main className="max-w-2xl mx-auto px-6 py-10">
-        <h2 className="text-2xl font-bold mb-8">טרייד חדש</h2>
+        <h2 className="font-display text-2xl mb-8">טרייד חדש</h2>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
 
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 flex flex-col gap-4">
+          <div className="bg-white/5 rounded-xl border border-white/10 p-6 flex flex-col gap-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">תאריך *</label>
+              <label className="block text-sm text-zen-cream/50 mb-1">תאריך *</label>
               <input type="date" name="date" required value={form.date} onChange={handleChange}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500" />
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-zen-cream focus:outline-none focus:border-zen-sage" />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">סימול *</label>
+              <label className="block text-sm text-zen-cream/50 mb-1">סימול *</label>
               <input type="text" name="symbol" required placeholder="למשל: AAPL, TSLA" value={form.symbol} onChange={handleChange}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500" />
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-zen-cream placeholder-zen-cream/30 focus:outline-none focus:border-zen-sage" />
             </div>
           </div>
 
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-            <label className="block text-sm text-gray-400 mb-3">כיוון העסקה *</label>
+          <div className="bg-white/5 rounded-xl border border-white/10 p-6">
+            <label className="block text-sm text-zen-cream/50 mb-3">כיוון העסקה *</label>
             <div className="grid grid-cols-2 gap-3">
               <button type="button" onClick={() => setForm({ ...form, direction: 'long' })}
-                className={`flex items-center justify-center gap-2 py-4 rounded-xl border-2 text-lg font-bold transition-all ${form.direction === 'long' ? 'border-emerald-500 bg-emerald-500/20 text-emerald-400' : 'border-gray-700 text-gray-400 hover:border-gray-500'}`}>
+                className={`flex items-center justify-center gap-2 py-4 rounded-xl border-2 text-lg font-semibold transition-all ${form.direction === 'long' ? 'border-zen-sage bg-zen-sage/15 text-zen-sage' : 'border-white/10 text-zen-cream/50 hover:border-white/25'}`}>
                 <span className="text-2xl">↑</span> לונג
               </button>
               <button type="button" onClick={() => setForm({ ...form, direction: 'short' })}
-                className={`flex items-center justify-center gap-2 py-4 rounded-xl border-2 text-lg font-bold transition-all ${form.direction === 'short' ? 'border-red-500 bg-red-500/20 text-red-400' : 'border-gray-700 text-gray-400 hover:border-gray-500'}`}>
+                className={`flex items-center justify-center gap-2 py-4 rounded-xl border-2 text-lg font-semibold transition-all ${form.direction === 'short' ? 'border-red-500 bg-red-500/15 text-red-400' : 'border-white/10 text-zen-cream/50 hover:border-white/25'}`}>
                 <span className="text-2xl">↓</span> שורט
               </button>
             </div>
           </div>
 
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 flex flex-col gap-4">
+          <div className="bg-white/5 rounded-xl border border-white/10 p-6 flex flex-col gap-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">מחיר כניסה *</label>
+              <label className="block text-sm text-zen-cream/50 mb-1">מחיר כניסה *</label>
               <input type="number" name="entry_price" required step="0.01" placeholder="0.00" value={form.entry_price} onChange={handleChange}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500" />
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-zen-cream placeholder-zen-cream/30 focus:outline-none focus:border-zen-sage" />
             </div>
             <div>
               <label className="block text-sm text-red-400 mb-1">מחיר S.L (Stop Loss)</label>
               <input type="number" name="stop_loss" step="0.01" placeholder="0.00" value={form.stop_loss} onChange={handleChange}
-                className="w-full bg-gray-800 border border-red-900 rounded-lg px-4 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-red-500" />
+                className="w-full bg-white/5 border border-red-900/50 rounded-lg px-4 py-2 text-zen-cream placeholder-zen-cream/30 focus:outline-none focus:border-red-500" />
             </div>
             <div>
-              <label className="block text-sm text-emerald-400 mb-1">מחיר T.P (Take Profit)</label>
+              <label className="block text-sm text-zen-sage mb-1">מחיר T.P (Take Profit)</label>
               <input type="number" name="take_profit" step="0.01" placeholder="0.00" value={form.take_profit} onChange={handleChange}
-                className="w-full bg-gray-800 border border-emerald-900 rounded-lg px-4 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500" />
+                className="w-full bg-white/5 border border-zen-sage/30 rounded-lg px-4 py-2 text-zen-cream placeholder-zen-cream/30 focus:outline-none focus:border-zen-sage" />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">נקודת שינה ($) — כמה מוכן לסכן</label>
+              <label className="block text-sm text-zen-cream/50 mb-1">נקודת שינה ($) — כמה מוכן לסכן</label>
               <input type="number" name="risk_amount" step="0.01" placeholder="100" value={form.risk_amount} onChange={handleChange}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500" />
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-zen-cream placeholder-zen-cream/30 focus:outline-none focus:border-zen-sage" />
             </div>
           </div>
 
           {(shares > 0 || riskReward > 0) && (
-            <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-              <h3 className="text-sm text-gray-400 mb-4 font-medium">חישובים אוטומטיים</h3>
+            <div className="bg-white/5 rounded-xl border border-white/10 p-6">
+              <h3 className="text-sm text-zen-cream/50 mb-4 font-medium">חישובים אוטומטיים</h3>
               <div className="grid grid-cols-3 gap-4">
-                <div className="bg-gray-800 rounded-lg p-3 text-center">
-                  <p className="text-xs text-gray-500 mb-1">כמות מניות</p>
-                  <p className="text-lg font-bold text-white">{shares.toFixed(0)}</p>
+                <div className="bg-white/5 rounded-lg p-3 text-center">
+                  <p className="text-xs text-zen-cream/40 mb-1">כמות מניות</p>
+                  <p className="text-lg font-semibold text-zen-cream">{shares.toFixed(0)}</p>
                 </div>
-                <div className="bg-gray-800 rounded-lg p-3 text-center">
-                  <p className="text-xs text-gray-500 mb-1">שווי עסקה</p>
-                  <p className="text-lg font-bold text-white">${positionSize.toFixed(0)}</p>
+                <div className="bg-white/5 rounded-lg p-3 text-center">
+                  <p className="text-xs text-zen-cream/40 mb-1">שווי עסקה</p>
+                  <p className="text-lg font-semibold text-zen-cream">${positionSize.toFixed(0)}</p>
                 </div>
-                <div className="bg-gray-800 rounded-lg p-3 text-center">
-                  <p className="text-xs text-gray-500 mb-1">יחס סיכון/סיכוי</p>
-                  <p className={`text-lg font-bold ${riskReward >= 2 ? 'text-emerald-400' : riskReward >= 1 ? 'text-yellow-400' : 'text-red-400'}`}>
+                <div className="bg-white/5 rounded-lg p-3 text-center">
+                  <p className="text-xs text-zen-cream/40 mb-1">יחס סיכון/סיכוי</p>
+                  <p className={`text-lg font-semibold ${riskReward >= 2 ? 'text-zen-sage' : riskReward >= 1 ? 'text-amber-400' : 'text-red-400'}`}>
                     1:{riskReward.toFixed(1)}
                   </p>
                 </div>
@@ -193,35 +193,35 @@ export default function NewTradePage() {
             </div>
           )}
 
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 flex flex-col gap-4">
+          <div className="bg-white/5 rounded-xl border border-white/10 p-6 flex flex-col gap-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Setup</label>
+              <label className="block text-sm text-zen-cream/50 mb-1">Setup</label>
               <input type="text" name="setup" placeholder="למשל: breakout, pullback..." value={form.setup} onChange={handleChange}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500" />
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-zen-cream placeholder-zen-cream/30 focus:outline-none focus:border-zen-sage" />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">הערות</label>
+              <label className="block text-sm text-zen-cream/50 mb-1">הערות</label>
               <textarea name="notes" rows={4} placeholder="תחושות, סיבות, תיאור הטרייד..." value={form.notes} onChange={handleChange}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500 resize-none" />
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-zen-cream placeholder-zen-cream/30 focus:outline-none focus:border-zen-sage resize-none" />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">תמונה (צילום מסך)</label>
+              <label className="block text-sm text-zen-cream/50 mb-1">תמונה (צילום מסך)</label>
               <input type="file" accept="image/*" onChange={handleImage}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:bg-emerald-600 file:text-white file:text-sm cursor-pointer" />
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-zen-cream file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:bg-zen-sage file:text-zen-charcoal file:text-sm cursor-pointer" />
               {imagePreview && (
-                <img src={imagePreview} alt="תצוגה מקדימה" className="mt-3 rounded-lg max-h-48 object-contain border border-gray-700" />
+                <img src={imagePreview} alt="תצוגה מקדימה" className="mt-3 rounded-lg max-h-48 object-contain border border-white/10" />
               )}
             </div>
           </div>
 
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-            <label className="block text-sm text-gray-400 mb-1">תוצאה ($) — רווח/הפסד סופי</label>
+          <div className="bg-white/5 rounded-xl border border-white/10 p-6">
+            <label className="block text-sm text-zen-cream/50 mb-1">תוצאה ($) — רווח/הפסד סופי</label>
             <input type="number" name="result" step="0.01" placeholder="השאר ריק אם הטרייד עדיין פתוח" value={form.result} onChange={handleChange}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500" />
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-zen-cream placeholder-zen-cream/30 focus:outline-none focus:border-zen-sage" />
           </div>
 
           <button type="submit" disabled={loading}
-            className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-700 disabled:text-gray-400 text-white font-semibold py-4 rounded-xl transition-colors text-lg">
+            className="w-full bg-zen-sage hover:opacity-90 disabled:opacity-40 text-zen-charcoal font-semibold py-4 rounded-xl transition-opacity text-lg">
             {loading ? 'שומר...' : 'שמור טרייד'}
           </button>
 
