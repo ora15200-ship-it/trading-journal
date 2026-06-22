@@ -264,9 +264,9 @@ export default function DashboardPage() {
                     <td className="py-3 pr-2 text-zen-cream/50">{trade.setup || '-'}</td>
                     <td className="py-3 pr-2">
                       <div className="flex gap-2 justify-end">
-                        <button onClick={(e) => { e.stopPropagation(); window.location.href = `/dashboard/edit-trade/${trade.id}` }}
+                        <button onClick={(e) => { e.stopPropagation(); window.location.href = `/dashboard/manage-trade/${trade.id}` }}
                           className="text-xs bg-white/10 hover:bg-white/15 text-zen-cream px-2 py-1 rounded transition-colors">
-                          ערוך
+                          ניהול עסקה
                         </button>
                         <button onClick={(e) => { e.stopPropagation(); handleDelete(trade.id) }} disabled={deletingId === trade.id}
                           className="text-xs bg-red-900/40 hover:bg-red-900/60 text-red-300 px-2 py-1 rounded transition-colors disabled:opacity-50">
@@ -352,9 +352,9 @@ export default function DashboardPage() {
                     <td className="py-3 pr-2 text-zen-cream/50">{trade.setup || '-'}</td>
                     <td className="py-3 pr-2">
                       <div className="flex gap-2 justify-end">
-                        <button onClick={(e) => { e.stopPropagation(); window.location.href = `/dashboard/edit-trade/${trade.id}` }}
+                        <button onClick={(e) => { e.stopPropagation(); window.location.href = `/dashboard/manage-trade/${trade.id}` }}
                           className="text-xs bg-white/10 hover:bg-white/15 text-zen-cream px-2 py-1 rounded transition-colors">
-                          ערוך
+                          ניהול עסקה
                         </button>
                         <button onClick={(e) => { e.stopPropagation(); handleDelete(trade.id) }} disabled={deletingId === trade.id}
                           className="text-xs bg-red-900/40 hover:bg-red-900/60 text-red-300 px-2 py-1 rounded transition-colors disabled:opacity-50">
