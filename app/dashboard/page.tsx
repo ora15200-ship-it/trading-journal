@@ -162,11 +162,11 @@ export default function DashboardPage() {
           </div>
           <div className="bg-white/5 rounded-xl p-5 border border-white/10">
             <p className="text-zen-cream/40 text-sm mb-1">Win Rate</p>
-            <p className="text-3xl font-semibold text-green-400">{winRate}%</p>
+            <p className="text-3xl font-semibold text-zen-profit">{winRate}%</p>
           </div>
           <div className="bg-white/5 rounded-xl p-5 border border-white/10">
             <p className="text-zen-cream/40 text-sm mb-1">רווח כולל</p>
-            <p className={`text-3xl font-semibold ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            <p className={`text-3xl font-semibold ${totalProfit >= 0 ? 'text-zen-profit' : 'text-red-400'}`}>
               ${totalProfit.toFixed(2)}
             </p>
           </div>
@@ -176,7 +176,7 @@ export default function DashboardPage() {
           </div>
           <div className="bg-white/5 rounded-xl p-5 border border-white/10">
             <p className="text-zen-cream/40 text-sm mb-1">רווח החודש</p>
-            <p className={`text-3xl font-semibold ${monthProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            <p className={`text-3xl font-semibold ${monthProfit >= 0 ? 'text-zen-profit' : 'text-red-400'}`}>
               {monthProfit >= 0 ? '+' : ''}${monthProfit.toFixed(2)}
             </p>
           </div>
@@ -231,31 +231,32 @@ export default function DashboardPage() {
               </thead>
               <tbody>
                 {openTrades.map(trade => (
-                  <tr key={trade.id} className="border-b border-white/10 hover:bg-white/5 transition-colors text-right">
+                  <tr key={trade.id} onClick={() => window.location.href = `/dashboard/manage-trade/${trade.id}`}
+                    className="border-b border-white/10 hover:bg-white/5 transition-colors text-right cursor-pointer">
                     <td className="py-3 pr-2">
                       {trade.image_url ? (
                         <img src={trade.image_url} alt="טרייד"
-                          onClick={() => setLightboxTrade({ image: trade.image_url!, notes: trade.notes, symbol: trade.symbol })}
+                          onClick={(e) => { e.stopPropagation(); setLightboxTrade({ image: trade.image_url!, notes: trade.notes, symbol: trade.symbol }) }}
                           className="w-12 h-10 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity border border-white/10" />
                       ) : (
                         <div className="w-12 h-10 bg-white/5 rounded border border-white/10 flex items-center justify-center text-zen-cream/30 text-xs">אין</div>
                       )}
                     </td>
                     <td className="py-3 pr-2">
-                      {trade.direction === 'long' ? <span className="text-green-400 font-bold text-lg">↑</span>
+                      {trade.direction === 'long' ? <span className="text-zen-profit font-bold text-lg">↑</span>
                         : trade.direction === 'short' ? <span className="text-red-400 font-bold text-lg">↓</span> : '-'}
                     </td>
                     <td className="py-3 pr-2 text-zen-cream/70">{trade.date}</td>
                     <td className="py-3 pr-2 font-semibold text-zen-cream">{trade.symbol}</td>
                     <td className="py-3 pr-2">${trade.entry_price}</td>
                     <td className="py-3 pr-2 text-red-400">{trade.stop_loss ? `$${trade.stop_loss}` : '-'}</td>
-                    <td className="py-3 pr-2 text-green-400">{trade.take_profit ? `$${trade.take_profit}` : '-'}</td>
+                    <td className="py-3 pr-2 text-zen-profit">{trade.take_profit ? `$${trade.take_profit}` : '-'}</td>
                     <td className="py-3 pr-2 text-amber-400">{trade.risk_amount ? `$${trade.risk_amount}` : '-'}</td>
                     <td className="py-3 pr-2">{trade.shares ? Math.round(trade.shares) : '-'}</td>
                     <td className="py-3 pr-2">{trade.position_size ? `$${Math.round(trade.position_size)}` : '-'}</td>
                     <td className="py-3 pr-2">
                       {trade.risk_reward ? (
-                        <span className={trade.risk_reward >= 2 ? 'text-green-400' : trade.risk_reward >= 1 ? 'text-amber-400' : 'text-red-400'}>
+                        <span className={trade.risk_reward >= 2 ? 'text-zen-profit' : trade.risk_reward >= 1 ? 'text-amber-400' : 'text-red-400'}>
                           1:{trade.risk_reward.toFixed(1)}
                         </span>
                       ) : '-'}
@@ -263,11 +264,11 @@ export default function DashboardPage() {
                     <td className="py-3 pr-2 text-zen-cream/50">{trade.setup || '-'}</td>
                     <td className="py-3 pr-2">
                       <div className="flex gap-2 justify-end">
-                        <button onClick={() => window.location.href = `/dashboard/edit-trade/${trade.id}`}
+                        <button onClick={(e) => { e.stopPropagation(); window.location.href = `/dashboard/edit-trade/${trade.id}` }}
                           className="text-xs bg-white/10 hover:bg-white/15 text-zen-cream px-2 py-1 rounded transition-colors">
                           ערוך
                         </button>
-                        <button onClick={() => handleDelete(trade.id)} disabled={deletingId === trade.id}
+                        <button onClick={(e) => { e.stopPropagation(); handleDelete(trade.id) }} disabled={deletingId === trade.id}
                           className="text-xs bg-red-900/40 hover:bg-red-900/60 text-red-300 px-2 py-1 rounded transition-colors disabled:opacity-50">
                           {deletingId === trade.id ? '...' : 'מחק'}
                         </button>
@@ -314,47 +315,48 @@ export default function DashboardPage() {
               </thead>
               <tbody>
                 {closedTradesSorted.map((trade, i) => (
-                  <tr key={trade.id} className="border-b border-white/10 hover:bg-white/5 transition-colors text-right">
+                  <tr key={trade.id} onClick={() => window.location.href = `/dashboard/manage-trade/${trade.id}`}
+                    className="border-b border-white/10 hover:bg-white/5 transition-colors text-right cursor-pointer">
                     <td className="py-3 pr-2 text-zen-cream/40">{i + 1}</td>
                     <td className="py-3 pr-2">
                       {trade.image_url ? (
                         <img src={trade.image_url} alt="טרייד"
-                          onClick={() => setLightboxTrade({ image: trade.image_url!, notes: trade.notes, symbol: trade.symbol })}
+                          onClick={(e) => { e.stopPropagation(); setLightboxTrade({ image: trade.image_url!, notes: trade.notes, symbol: trade.symbol }) }}
                           className="w-12 h-10 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity border border-white/10" />
                       ) : (
                         <div className="w-12 h-10 bg-white/5 rounded border border-white/10 flex items-center justify-center text-zen-cream/30 text-xs">אין</div>
                       )}
                     </td>
                     <td className="py-3 pr-2">
-                      {trade.direction === 'long' ? <span className="text-green-400 font-bold text-lg">↑</span>
+                      {trade.direction === 'long' ? <span className="text-zen-profit font-bold text-lg">↑</span>
                         : trade.direction === 'short' ? <span className="text-red-400 font-bold text-lg">↓</span> : '-'}
                     </td>
                     <td className="py-3 pr-2 text-zen-cream/70">{trade.date}</td>
                     <td className="py-3 pr-2 font-semibold text-zen-cream">{trade.symbol}</td>
                     <td className="py-3 pr-2">${trade.entry_price}</td>
                     <td className="py-3 pr-2 text-red-400">{trade.stop_loss ? `$${trade.stop_loss}` : '-'}</td>
-                    <td className="py-3 pr-2 text-green-400">{trade.take_profit ? `$${trade.take_profit}` : '-'}</td>
+                    <td className="py-3 pr-2 text-zen-profit">{trade.take_profit ? `$${trade.take_profit}` : '-'}</td>
                     <td className="py-3 pr-2 text-amber-400">{trade.risk_amount ? `$${trade.risk_amount}` : '-'}</td>
                     <td className="py-3 pr-2">{trade.shares ? Math.round(trade.shares) : '-'}</td>
                     <td className="py-3 pr-2">{trade.position_size ? `$${Math.round(trade.position_size)}` : '-'}</td>
                     <td className="py-3 pr-2">
                       {trade.risk_reward ? (
-                        <span className={trade.risk_reward >= 2 ? 'text-green-400' : trade.risk_reward >= 1 ? 'text-amber-400' : 'text-red-400'}>
+                        <span className={trade.risk_reward >= 2 ? 'text-zen-profit' : trade.risk_reward >= 1 ? 'text-amber-400' : 'text-red-400'}>
                           1:{trade.risk_reward.toFixed(1)}
                         </span>
                       ) : '-'}
                     </td>
-                    <td className={`py-3 pr-2 font-semibold ${(trade.result ?? 0) > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    <td className={`py-3 pr-2 font-semibold ${(trade.result ?? 0) > 0 ? 'text-zen-profit' : 'text-red-400'}`}>
                       ${trade.result!.toFixed(2)}
                     </td>
                     <td className="py-3 pr-2 text-zen-cream/50">{trade.setup || '-'}</td>
                     <td className="py-3 pr-2">
                       <div className="flex gap-2 justify-end">
-                        <button onClick={() => window.location.href = `/dashboard/edit-trade/${trade.id}`}
+                        <button onClick={(e) => { e.stopPropagation(); window.location.href = `/dashboard/edit-trade/${trade.id}` }}
                           className="text-xs bg-white/10 hover:bg-white/15 text-zen-cream px-2 py-1 rounded transition-colors">
                           ערוך
                         </button>
-                        <button onClick={() => handleDelete(trade.id)} disabled={deletingId === trade.id}
+                        <button onClick={(e) => { e.stopPropagation(); handleDelete(trade.id) }} disabled={deletingId === trade.id}
                           className="text-xs bg-red-900/40 hover:bg-red-900/60 text-red-300 px-2 py-1 rounded transition-colors disabled:opacity-50">
                           {deletingId === trade.id ? '...' : 'מחק'}
                         </button>
