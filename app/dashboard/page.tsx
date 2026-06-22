@@ -106,6 +106,8 @@ export default function DashboardPage() {
 
   const totalTrades = trades.length
   const closedTrades = trades.filter(t => t.result !== null)
+  const openTrades = trades.filter(t => t.result === null)
+  const closedTradesSorted = closedTrades
   const winners = closedTrades.filter(t => (t.result ?? 0) > 0)
   const winRate = closedTrades.length ? Math.round((winners.length / closedTrades.length) * 100) : 0
   const totalProfit = closedTrades.reduce((sum, t) => sum + (t.result ?? 0), 0)
@@ -186,28 +188,28 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <div className="bg-white/5 rounded-xl border border-white/10 p-6 overflow-x-auto">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg font-semibold">הטריידים שלי</h2>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowChatModal(true)}
-                className="bg-white/10 hover:bg-white/15 text-zen-cream px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                ZEN Bot
-              </button>
-              <Link href={newTradeUrl} className="bg-zen-sage hover:opacity-90 text-zen-charcoal px-4 py-2 rounded-lg text-sm font-semibold transition-opacity">
-                + טרייד חדש
-              </Link>
-            </div>
-          </div>
+        <div className="flex justify-end gap-2 mb-4">
+          <button
+            onClick={() => setShowChatModal(true)}
+            className="bg-white/10 hover:bg-white/15 text-zen-cream px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+            ZEN Bot
+          </button>
+          <Link href={newTradeUrl} className="bg-zen-sage hover:opacity-90 text-zen-charcoal px-4 py-2 rounded-lg text-sm font-semibold transition-opacity">
+            + טרייד חדש
+          </Link>
+        </div>
+
+        {/* עסקאות פתוחות - תמיד מוצג */}
+        <div className="bg-white/5 rounded-xl border border-zen-sage/30 p-6 overflow-x-auto mb-6">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            עסקאות פתוחות
+            <span className="text-xs font-normal bg-zen-sage/15 text-zen-sage px-2 py-0.5 rounded-full">{openTrades.length}</span>
+          </h2>
 
           {loading ? (
-            <div className="text-center text-zen-cream/40 py-16">טוען...</div>
-          ) : trades.length === 0 ? (
-            <div className="text-center text-zen-cream/40 py-16">
-              <p className="text-lg">עדיין אין טריידים בתיק זה</p>
-              <p className="text-sm mt-2">לחץ על טרייד חדש כדי להתחיל</p>
-            </div>
+            <div className="text-center text-zen-cream/40 py-10">טוען...</div>
+          ) : openTrades.length === 0 ? (
+            <div className="text-center text-zen-cream/40 py-10">אין עסקאות פתוחות כרגע</div>
           ) : (
             <table className="w-full text-sm">
               <thead>
@@ -223,13 +225,12 @@ export default function DashboardPage() {
                   <th className="pb-3 pr-2">כמות</th>
                   <th className="pb-3 pr-2">שווי</th>
                   <th className="pb-3 pr-2">יחס</th>
-                  <th className="pb-3 pr-2">תוצאה</th>
                   <th className="pb-3 pr-2">Setup</th>
                   <th className="pb-3 pr-2">פעולות</th>
                 </tr>
               </thead>
               <tbody>
-                {trades.map(trade => (
+                {openTrades.map(trade => (
                   <tr key={trade.id} className="border-b border-white/10 hover:bg-white/5 transition-colors text-right">
                     <td className="py-3 pr-2">
                       {trade.image_url ? (
@@ -259,8 +260,92 @@ export default function DashboardPage() {
                         </span>
                       ) : '-'}
                     </td>
-                    <td className={`py-3 pr-2 font-semibold ${trade.result === null ? 'text-zen-cream/40' : trade.result > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {trade.result === null ? 'פתוח' : `$${trade.result.toFixed(2)}`}
+                    <td className="py-3 pr-2 text-zen-cream/50">{trade.setup || '-'}</td>
+                    <td className="py-3 pr-2">
+                      <div className="flex gap-2 justify-end">
+                        <button onClick={() => window.location.href = `/dashboard/edit-trade/${trade.id}`}
+                          className="text-xs bg-white/10 hover:bg-white/15 text-zen-cream px-2 py-1 rounded transition-colors">
+                          ערוך
+                        </button>
+                        <button onClick={() => handleDelete(trade.id)} disabled={deletingId === trade.id}
+                          className="text-xs bg-red-900/40 hover:bg-red-900/60 text-red-300 px-2 py-1 rounded transition-colors disabled:opacity-50">
+                          {deletingId === trade.id ? '...' : 'מחק'}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* היסטוריית עסקאות - סגורות, חדש למעלה */}
+        <div className="bg-white/5 rounded-xl border border-white/10 p-6 overflow-x-auto">
+          <h2 className="text-lg font-semibold mb-4">היסטוריית העסקאות שלי</h2>
+
+          {loading ? (
+            <div className="text-center text-zen-cream/40 py-16">טוען...</div>
+          ) : closedTradesSorted.length === 0 ? (
+            <div className="text-center text-zen-cream/40 py-16">
+              <p className="text-lg">עדיין אין עסקאות סגורות</p>
+              <p className="text-sm mt-2">עסקאות שתסגור יופיעו כאן</p>
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-zen-cream/40 border-b border-white/10 text-right">
+                  <th className="pb-3 pr-2">#</th>
+                  <th className="pb-3 pr-2">תמונה</th>
+                  <th className="pb-3 pr-2">כיוון</th>
+                  <th className="pb-3 pr-2">תאריך</th>
+                  <th className="pb-3 pr-2">סימול</th>
+                  <th className="pb-3 pr-2">כניסה</th>
+                  <th className="pb-3 pr-2">S.L</th>
+                  <th className="pb-3 pr-2">T.P</th>
+                  <th className="pb-3 pr-2">סיכון</th>
+                  <th className="pb-3 pr-2">כמות</th>
+                  <th className="pb-3 pr-2">שווי</th>
+                  <th className="pb-3 pr-2">יחס</th>
+                  <th className="pb-3 pr-2">תוצאה</th>
+                  <th className="pb-3 pr-2">Setup</th>
+                  <th className="pb-3 pr-2">פעולות</th>
+                </tr>
+              </thead>
+              <tbody>
+                {closedTradesSorted.map((trade, i) => (
+                  <tr key={trade.id} className="border-b border-white/10 hover:bg-white/5 transition-colors text-right">
+                    <td className="py-3 pr-2 text-zen-cream/40">{i + 1}</td>
+                    <td className="py-3 pr-2">
+                      {trade.image_url ? (
+                        <img src={trade.image_url} alt="טרייד"
+                          onClick={() => setLightboxTrade({ image: trade.image_url!, notes: trade.notes, symbol: trade.symbol })}
+                          className="w-12 h-10 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity border border-white/10" />
+                      ) : (
+                        <div className="w-12 h-10 bg-white/5 rounded border border-white/10 flex items-center justify-center text-zen-cream/30 text-xs">אין</div>
+                      )}
+                    </td>
+                    <td className="py-3 pr-2">
+                      {trade.direction === 'long' ? <span className="text-green-400 font-bold text-lg">↑</span>
+                        : trade.direction === 'short' ? <span className="text-red-400 font-bold text-lg">↓</span> : '-'}
+                    </td>
+                    <td className="py-3 pr-2 text-zen-cream/70">{trade.date}</td>
+                    <td className="py-3 pr-2 font-semibold text-zen-cream">{trade.symbol}</td>
+                    <td className="py-3 pr-2">${trade.entry_price}</td>
+                    <td className="py-3 pr-2 text-red-400">{trade.stop_loss ? `$${trade.stop_loss}` : '-'}</td>
+                    <td className="py-3 pr-2 text-green-400">{trade.take_profit ? `$${trade.take_profit}` : '-'}</td>
+                    <td className="py-3 pr-2 text-amber-400">{trade.risk_amount ? `$${trade.risk_amount}` : '-'}</td>
+                    <td className="py-3 pr-2">{trade.shares ? Math.round(trade.shares) : '-'}</td>
+                    <td className="py-3 pr-2">{trade.position_size ? `$${Math.round(trade.position_size)}` : '-'}</td>
+                    <td className="py-3 pr-2">
+                      {trade.risk_reward ? (
+                        <span className={trade.risk_reward >= 2 ? 'text-green-400' : trade.risk_reward >= 1 ? 'text-amber-400' : 'text-red-400'}>
+                          1:{trade.risk_reward.toFixed(1)}
+                        </span>
+                      ) : '-'}
+                    </td>
+                    <td className={`py-3 pr-2 font-semibold ${(trade.result ?? 0) > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      ${trade.result!.toFixed(2)}
                     </td>
                     <td className="py-3 pr-2 text-zen-cream/50">{trade.setup || '-'}</td>
                     <td className="py-3 pr-2">
