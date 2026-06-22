@@ -19,24 +19,10 @@ export default function EditTradePage() {
     symbol: '',
     direction: 'long',
     entry_price: '',
-    stop_loss: '',
-    take_profit: '',
-    risk_amount: '',
     setup: '',
     notes: '',
     result: '',
   })
-
-  const entryPrice = parseFloat(form.entry_price) || 0
-  const stopLoss = parseFloat(form.stop_loss) || 0
-  const takeProfit = parseFloat(form.take_profit) || 0
-  const riskAmount = parseFloat(form.risk_amount) || 0
-
-  const stopSize = entryPrice - stopLoss
-  const shares = stopSize > 0 && riskAmount > 0 ? riskAmount / stopSize : 0
-  const positionSize = shares * entryPrice
-  const rewardSize = takeProfit - entryPrice
-  const riskReward = stopSize > 0 && rewardSize > 0 ? rewardSize / stopSize : 0
 
   useEffect(() => {
     const fetchTrade = async () => {
@@ -50,9 +36,6 @@ export default function EditTradePage() {
           symbol: data.symbol || '',
           direction: data.direction || 'long',
           entry_price: data.entry_price?.toString() || '',
-          stop_loss: data.stop_loss?.toString() || '',
-          take_profit: data.take_profit?.toString() || '',
-          risk_amount: data.risk_amount?.toString() || '',
           setup: data.setup || '',
           notes: data.notes || '',
           result: data.result?.toString() || '',
@@ -100,13 +83,7 @@ export default function EditTradePage() {
       date: form.date,
       symbol: form.symbol.toUpperCase(),
       direction: form.direction,
-      entry_price: entryPrice || null,
-      stop_loss: stopLoss || null,
-      take_profit: takeProfit || null,
-      risk_amount: riskAmount || null,
-      shares: shares || null,
-      position_size: positionSize || null,
-      risk_reward: riskReward || null,
+      entry_price: parseFloat(form.entry_price) || null,
       setup: form.setup || null,
       notes: form.notes || null,
       result: form.result ? parseFloat(form.result) : null,
@@ -121,128 +98,97 @@ export default function EditTradePage() {
     }
   }
 
-  if (loading) return <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">טוען...</div>
+  if (loading) return <div className="min-h-screen bg-zen-charcoal text-zen-cream flex items-center justify-center">טוען...</div>
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      <nav className="bg-gray-900 border-b border-gray-800 px-6 py-4 flex justify-between items-center">
-        <h1 className="text-xl font-bold text-emerald-400">יומן מסחר</h1>
+    <div className="min-h-screen bg-zen-charcoal text-zen-cream">
+      <nav className="bg-white/5 border-b border-white/10 px-6 py-4 flex justify-between items-center">
+        <img src="/logo.svg" alt="ZenStock" className="h-8 w-auto" />
         <button
           onClick={() => window.location.href = portfolioId ? `/dashboard?portfolio=${portfolioId}` : '/dashboard'}
-          className="text-sm text-gray-400 hover:text-white transition-colors">
+          className="text-sm text-zen-cream/50 hover:text-zen-cream transition-colors">
           ← חזרה לדשבורד
         </button>
       </nav>
 
       <main className="max-w-2xl mx-auto px-6 py-10">
-        <h2 className="text-2xl font-bold mb-8">עריכת טרייד</h2>
+        <h2 className="font-display text-2xl mb-2">עריכת פרטי כניסה</h2>
+        <p className="text-sm text-zen-cream/50 mb-6">
+          תיקון עובדות בסיסיות בלבד (תאריך, סימול, כניסה, הערות). לעדכון S.L / T.P עבור לדף ניהול העסקה.
+        </p>
+
+        <a href={`/dashboard/manage-trade/${id}`}
+          className="inline-block mb-8 text-sm bg-zen-sage/15 border border-zen-sage/30 text-zen-sage px-4 py-2 rounded-lg hover:bg-zen-sage/25 transition-colors">
+          → לדף ניהול עסקה דינמי (S.L / T.P)
+        </a>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
 
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 flex flex-col gap-4">
+          <div className="bg-white/5 rounded-xl border border-white/10 p-6 flex flex-col gap-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">תאריך *</label>
+              <label className="block text-sm text-zen-cream/50 mb-1">תאריך *</label>
               <input type="date" name="date" required value={form.date} onChange={handleChange}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500" />
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-zen-cream focus:outline-none focus:border-zen-sage" />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">סימול *</label>
+              <label className="block text-sm text-zen-cream/50 mb-1">סימול *</label>
               <input type="text" name="symbol" required value={form.symbol} onChange={handleChange}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500" />
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-zen-cream focus:outline-none focus:border-zen-sage" />
             </div>
           </div>
 
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-            <label className="block text-sm text-gray-400 mb-3">כיוון העסקה *</label>
+          <div className="bg-white/5 rounded-xl border border-white/10 p-6">
+            <label className="block text-sm text-zen-cream/50 mb-3">כיוון העסקה *</label>
             <div className="grid grid-cols-2 gap-3">
               <button type="button" onClick={() => setForm({ ...form, direction: 'long' })}
-                className={`flex items-center justify-center gap-2 py-4 rounded-xl border-2 text-lg font-bold transition-all ${form.direction === 'long' ? 'border-emerald-500 bg-emerald-500/20 text-emerald-400' : 'border-gray-700 text-gray-400 hover:border-gray-500'}`}>
+                className={`flex items-center justify-center gap-2 py-4 rounded-xl border-2 text-lg font-semibold transition-all ${form.direction === 'long' ? 'border-zen-profit bg-zen-profit/15 text-zen-profit' : 'border-white/10 text-zen-cream/50 hover:border-white/25'}`}>
                 <span className="text-2xl">↑</span> לונג
               </button>
               <button type="button" onClick={() => setForm({ ...form, direction: 'short' })}
-                className={`flex items-center justify-center gap-2 py-4 rounded-xl border-2 text-lg font-bold transition-all ${form.direction === 'short' ? 'border-red-500 bg-red-500/20 text-red-400' : 'border-gray-700 text-gray-400 hover:border-gray-500'}`}>
+                className={`flex items-center justify-center gap-2 py-4 rounded-xl border-2 text-lg font-semibold transition-all ${form.direction === 'short' ? 'border-red-500 bg-red-500/15 text-red-400' : 'border-white/10 text-zen-cream/50 hover:border-white/25'}`}>
                 <span className="text-2xl">↓</span> שורט
               </button>
             </div>
           </div>
 
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 flex flex-col gap-4">
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">מחיר כניסה *</label>
-              <input type="number" name="entry_price" required step="0.01" value={form.entry_price} onChange={handleChange}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500" />
-            </div>
-            <div>
-              <label className="block text-sm text-red-400 mb-1">מחיר S.L (Stop Loss)</label>
-              <input type="number" name="stop_loss" step="0.01" value={form.stop_loss} onChange={handleChange}
-                className="w-full bg-gray-800 border border-red-900 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500" />
-            </div>
-            <div>
-              <label className="block text-sm text-emerald-400 mb-1">מחיר T.P (Take Profit)</label>
-              <input type="number" name="take_profit" step="0.01" value={form.take_profit} onChange={handleChange}
-                className="w-full bg-gray-800 border border-emerald-900 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500" />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">נקודת שינה ($)</label>
-              <input type="number" name="risk_amount" step="0.01" value={form.risk_amount} onChange={handleChange}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500" />
-            </div>
+          <div className="bg-white/5 rounded-xl border border-white/10 p-6">
+            <label className="block text-sm text-zen-cream/50 mb-1">מחיר כניסה *</label>
+            <input type="number" name="entry_price" required step="0.01" value={form.entry_price} onChange={handleChange}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-zen-cream focus:outline-none focus:border-zen-sage" />
           </div>
 
-          {(shares > 0 || riskReward > 0) && (
-            <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-              <h3 className="text-sm text-gray-400 mb-4 font-medium">חישובים אוטומטיים</h3>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="bg-gray-800 rounded-lg p-3 text-center">
-                  <p className="text-xs text-gray-500 mb-1">כמות מניות</p>
-                  <p className="text-lg font-bold text-white">{shares.toFixed(0)}</p>
-                </div>
-                <div className="bg-gray-800 rounded-lg p-3 text-center">
-                  <p className="text-xs text-gray-500 mb-1">שווי עסקה</p>
-                  <p className="text-lg font-bold text-white">${positionSize.toFixed(0)}</p>
-                </div>
-                <div className="bg-gray-800 rounded-lg p-3 text-center">
-                  <p className="text-xs text-gray-500 mb-1">יחס סיכון/סיכוי</p>
-                  <p className={`text-lg font-bold ${riskReward >= 2 ? 'text-emerald-400' : riskReward >= 1 ? 'text-yellow-400' : 'text-red-400'}`}>
-                    1:{riskReward.toFixed(1)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 flex flex-col gap-4">
+          <div className="bg-white/5 rounded-xl border border-white/10 p-6 flex flex-col gap-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">תמונה (צילום מסך)</label>
+              <label className="block text-sm text-zen-cream/50 mb-1">תמונה (צילום מסך)</label>
               {existingImage && !imagePreview && (
-                <img src={existingImage} alt="תמונה קיימת" className="mb-3 rounded-lg max-h-48 object-contain border border-gray-700" />
+                <img src={existingImage} alt="תמונה קיימת" className="mb-3 rounded-lg max-h-48 object-contain border border-white/10" />
               )}
               <input type="file" accept="image/*" onChange={handleImage}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:bg-emerald-600 file:text-white file:text-sm cursor-pointer" />
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-zen-cream file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:bg-zen-sage file:text-zen-charcoal file:text-sm cursor-pointer" />
               {imagePreview && (
-                <img src={imagePreview} alt="תצוגה מקדימה" className="mt-3 rounded-lg max-h-48 object-contain border border-gray-700" />
+                <img src={imagePreview} alt="תצוגה מקדימה" className="mt-3 rounded-lg max-h-48 object-contain border border-white/10" />
               )}
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Setup</label>
+              <label className="block text-sm text-zen-cream/50 mb-1">Setup</label>
               <input type="text" name="setup" value={form.setup} onChange={handleChange}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500" />
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-zen-cream focus:outline-none focus:border-zen-sage" />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">הערות</label>
+              <label className="block text-sm text-zen-cream/50 mb-1">הערות</label>
               <textarea name="notes" rows={4} value={form.notes} onChange={handleChange}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500 resize-none" />
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-zen-cream focus:outline-none focus:border-zen-sage resize-none" />
             </div>
           </div>
 
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-            <label className="block text-sm text-gray-400 mb-1">תוצאה ($) — רווח/הפסד סופי</label>
+          <div className="bg-white/5 rounded-xl border border-white/10 p-6">
+            <label className="block text-sm text-zen-cream/50 mb-1">תוצאה ($) — רווח/הפסד סופי</label>
             <input type="number" name="result" step="0.01" placeholder="השאר ריק אם הטרייד עדיין פתוח" value={form.result} onChange={handleChange}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500" />
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-zen-cream placeholder-zen-cream/30 focus:outline-none focus:border-zen-sage" />
           </div>
 
           <button type="submit" disabled={saving}
-            className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-700 disabled:text-gray-400 text-white font-semibold py-4 rounded-xl transition-colors text-lg">
+            className="w-full bg-zen-sage hover:opacity-90 disabled:opacity-40 text-zen-charcoal font-semibold py-4 rounded-xl transition-opacity text-lg">
             {saving ? 'שומר...' : 'שמור שינויים'}
           </button>
 

@@ -159,9 +159,14 @@ export default function ManageTradePage() {
 
       <main className="max-w-3xl mx-auto px-6 py-10">
         <h2 className="font-display text-2xl mb-1">ניהול עסקה דינמי</h2>
-        <p className="text-zen-cream/50 text-sm mb-8">
+        <p className="text-zen-cream/50 text-sm mb-4">
           {trade.symbol} · {trade.direction === 'long' ? 'לונג ↑' : 'שורט ↓'} · נכנס/ה ב-{trade.date}
         </p>
+
+        <a href={`/dashboard/edit-trade/${trade.id}`}
+          className="inline-block mb-8 text-xs text-zen-cream/40 hover:text-zen-cream/70 underline transition-colors">
+          תיקון תאריך / סימול / מחיר כניסה / הערות
+        </a>
 
         {!isOpen && (
           <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-6 text-sm text-zen-cream/60">
