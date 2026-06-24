@@ -1,0 +1,159 @@
+import QRCode from 'qrcode'
+
+type TradeSummaryInput = {
+  symbol: string
+  direction: 'long' | 'short' | null
+  percent: number
+}
+
+const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="220" height="56" viewBox="0 0 220 56">
+  <path d="M28 6 A22 22 0 1 1 13.7 14.3" fill="none" stroke="#6FA98A" stroke-width="5" stroke-linecap="round"/>
+  <polyline points="15,40 24,33 30,36 40,20" fill="none" stroke="#F7F6F2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`
+
+const INSTAGRAM_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#F7F6F2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+</svg>`
+
+const WEBSITE_URL = 'https://trading-journal-liart-five.vercel.app'
+const INSTAGRAM_HANDLE = '@zenstock.il'
+
+function svgToDataUrl(svg: string) {
+  return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)))
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = reject
+    img.src = src
+  })
+}
+
+function ensureFontsLoaded(): Promise<void> {
+  const linkId = 'zenstock-summary-fonts'
+  if (!document.getElementById(linkId)) {
+    const link = document.createElement('link')
+    link.id = linkId
+    link.rel = 'stylesheet'
+    link.href = 'https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@700&family=Heebo:wght@500;600;700&display=swap'
+    document.head.appendChild(link)
+  }
+  return document.fonts.ready.then(() => {})
+}
+
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath()
+  ctx.moveTo(x + r, y)
+  ctx.arcTo(x + w, y, x + w, y + h, r)
+  ctx.arcTo(x + w, y + h, x, y + h, r)
+  ctx.arcTo(x, y + h, x, y, r)
+  ctx.arcTo(x, y, x + w, y, r)
+  ctx.closePath()
+}
+
+export async function generateTradeSummaryImage({ symbol, direction, percent }: TradeSummaryInput): Promise<void> {
+  await ensureFontsLoaded()
+  // טעינה כפולה כדי לוודא שהפונט נטען בפועל לפני הציור
+  await Promise.all([
+    document.fonts.load("700 140px Heebo"),
+    document.fonts.load("700 96px 'Frank Ruhl Libre'"),
+  ])
+
+  const size = 1080
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+
+  const isWin = percent >= 0
+  const accentColor = isWin ? '#6FA98A' : '#F87171'
+
+  // רקע
+  ctx.fillStyle = '#202022'
+  ctx.fillRect(0, 0, size, size)
+
+  // לוגו
+  const logoImg = await loadImage(svgToDataUrl(LOGO_SVG))
+  const logoWidth = 70
+  const logoHeight = (logoWidth / 220) * 56
+  ctx.drawImage(logoImg, 80, 75, logoWidth, logoHeight)
+  ctx.textAlign = 'left'
+  ctx.fillStyle = '#F7F6F2'
+  ctx.font = "700 32px Heebo, Arial, sans-serif"
+  ctx.fillText('ZenStock', 80 + logoWidth + 16, 75 + logoHeight / 2 + 11)
+
+  // טיקר
+  ctx.textAlign = 'center'
+  ctx.fillStyle = '#F7F6F2'
+  ctx.font = "700 96px 'Frank Ruhl Libre', serif"
+  ctx.fillText(symbol.toUpperCase(), size / 2, 480)
+
+  // באדג' כיוון
+  const badgeText = direction === 'short' ? 'SHORT' : 'LONG'
+  ctx.font = "600 28px Heebo, Arial, sans-serif"
+  const badgeTextWidth = ctx.measureText(badgeText).width
+  const badgeWidth = badgeTextWidth + 60
+  const badgeX = size / 2 - badgeWidth / 2
+  const badgeY = 520
+  ctx.strokeStyle = '#44464A'
+  ctx.lineWidth = 2
+  roundRect(ctx, badgeX, badgeY, badgeWidth, 56, 10)
+  ctx.stroke()
+  ctx.fillStyle = '#C7C9CC'
+  ctx.fillText(badgeText, size / 2, badgeY + 38)
+
+  // אחוז תשואה
+  const pctText = `${isWin ? '+' : ''}${percent.toFixed(1)}%`
+  ctx.font = "700 140px Heebo, Arial, sans-serif"
+  ctx.fillStyle = accentColor
+  ctx.fillText(pctText, size / 2, 760)
+
+  // קו מפריד
+  ctx.strokeStyle = '#44464A'
+  ctx.lineWidth = 2
+  ctx.beginPath()
+  ctx.moveTo(80, 880)
+  ctx.lineTo(size - 80, 880)
+  ctx.stroke()
+
+  // אינסטגרם
+  const igImg = await loadImage(svgToDataUrl(INSTAGRAM_ICON_SVG))
+  ctx.drawImage(igImg, 80, 920, 36, 36)
+  ctx.font = "500 30px Heebo, Arial, sans-serif"
+  ctx.fillStyle = '#F7F6F2'
+  ctx.textAlign = 'left'
+  ctx.fillText(INSTAGRAM_HANDLE, 80 + 50, 945)
+
+  // ברקוד QR
+  const qrDataUrl = await QRCode.toDataURL(WEBSITE_URL, {
+    margin: 0,
+    color: { dark: '#202022', light: '#F7F6F2' },
+  })
+  const qrImg = await loadImage(qrDataUrl)
+  ctx.drawImage(qrImg, size - 80 - 90, 905, 90, 90)
+
+  // מוטו
+  ctx.textAlign = 'center'
+  ctx.font = "500 26px Heebo, Arial, sans-serif"
+  ctx.fillStyle = '#C7C9CC'
+  ctx.fillText('Master Your Mind. Master Your Money.', size / 2, size - 45)
+
+  // הורדה
+  await new Promise<void>((resolve) => {
+    canvas.toBlob((blob) => {
+      if (!blob) { resolve(); return }
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `zenstock-${symbol.toLowerCase()}-summary.png`
+      a.click()
+      URL.revokeObjectURL(url)
+      resolve()
+    })
+  })
+}
