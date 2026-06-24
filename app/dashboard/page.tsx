@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 import TradeChatModal from '@/components/TradeChatModal'
+import { generateTradeSummaryImage } from '@/utils/supabase/generateTradeSummaryImage'
 
 type Trade = {
   id: string
@@ -35,6 +36,7 @@ export default function DashboardPage() {
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null)
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const [lightboxTrade, setLightboxTrade] = useState<{ image: string; notes: string | null; symbol: string } | null>(null)
   const [showChatModal, setShowChatModal] = useState(false)
   const [insights, setInsights] = useState<string | null>(null)
@@ -97,6 +99,24 @@ export default function DashboardPage() {
     await supabase.from('trades').delete().eq('id', id)
     await fetchTrades()
     setDeletingId(null)
+  }
+
+  const handleDownloadSummary = async (trade: Trade) => {
+    if (trade.result == null || !trade.position_size) {
+      alert('לא ניתן לחשב אחוז תשואה לעסקה הזו (חסר שווי פוזיציה)')
+      return
+    }
+    setDownloadingId(trade.id)
+    try {
+      const percent = (trade.result / trade.position_size) * 100
+      await generateTradeSummaryImage({
+        symbol: trade.symbol,
+        direction: trade.direction as 'long' | 'short' | null,
+        percent,
+      })
+    } finally {
+      setDownloadingId(null)
+    }
   }
 
   const portfolioId = typeof window !== 'undefined' ? getPortfolioId() : null
@@ -355,6 +375,10 @@ export default function DashboardPage() {
                         <button onClick={(e) => { e.stopPropagation(); window.location.href = `/dashboard/manage-trade/${trade.id}` }}
                           className="text-xs bg-white/10 hover:bg-white/15 text-zen-cream px-2 py-1 rounded transition-colors">
                           ניהול עסקה
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); handleDownloadSummary(trade) }} disabled={downloadingId === trade.id}
+                          className="text-xs bg-zen-sage/15 hover:bg-zen-sage/25 text-zen-sage px-2 py-1 rounded transition-colors disabled:opacity-50">
+                          {downloadingId === trade.id ? '...' : 'הורד סיכום'}
                         </button>
                         <button onClick={(e) => { e.stopPropagation(); handleDelete(trade.id) }} disabled={deletingId === trade.id}
                           className="text-xs bg-red-900/40 hover:bg-red-900/60 text-red-300 px-2 py-1 rounded transition-colors disabled:opacity-50">
