@@ -1,4 +1,5 @@
 import Link from "next/link";
+import InstallPwaButton from "../components/InstallPwaButton";
 
 export default function HomePage() {
   return (
@@ -15,12 +16,15 @@ export default function HomePage() {
               התחברות
             </Link>
           </nav>
-          <Link
-            href="/login"
-            className="rounded-md bg-zen-sage px-5 py-2 text-sm font-semibold text-zen-charcoal transition-opacity hover:opacity-90"
-          >
-            הרשמה חינם
-          </Link>
+          <div className="flex items-center gap-3">
+            <InstallPwaButton />
+            <Link
+              href="/login"
+              className="rounded-md bg-zen-sage px-5 py-2 text-sm font-semibold text-zen-charcoal transition-opacity hover:opacity-90"
+            >
+              הרשמה חינם
+            </Link>
+          </div>
         </div>
       </header>
 
