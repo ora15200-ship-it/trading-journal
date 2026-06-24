@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Frank_Ruhl_Libre, Geist_Mono, Heebo } from "next/font/google";
 import type { CSSProperties } from "react";
 import "./globals.css";
@@ -23,8 +23,16 @@ const fontDisplayStyle = {
 } as CSSProperties;
 
 export const metadata: Metadata = {
-  title: "יומן מסחר",
-  description: "יומן מסחר חכם עם ניתוח AI",
+  title: "ZenStock",
+  description: "Master Your Mind. Master Your Money.",
+  manifest: "/manifest.json",
+  icons: {
+    apple: "/icons/apple-touch-icon.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#202022",
 };
 
 export default function RootLayout({
