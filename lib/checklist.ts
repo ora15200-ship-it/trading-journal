@@ -158,6 +158,21 @@ export async function buildTemplateFromPreset(
   return full;
 }
 
+export async function addCategory(
+  templateId: string,
+  name: string,
+  orderIndex: number
+): Promise<ChecklistCategory> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('checklist_categories')
+    .insert({ template_id: templateId, name, order_index: orderIndex })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as ChecklistCategory;
+}
+
 export async function addItemToCategory(
   categoryId: string,
   bankItem: ChecklistBankItem,
