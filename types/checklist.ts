@@ -52,6 +52,7 @@ export interface ChecklistItem {
   bank_item_id: string | null;
   text: string;
   requires_note: boolean;
+  is_required: boolean;
   order_index: number;
   created_at: string;
 }
@@ -71,6 +72,7 @@ export interface TradeChecklistResponse {
   item_text_snapshot: string;
   is_checked: boolean;
   note: string | null;
+  overridden: boolean;
   created_at: string;
 }
 
@@ -80,6 +82,8 @@ export interface ChecklistResponseDraft {
   is_checked: boolean;
   note: string;
   requires_note: boolean;
+  is_required: boolean;
+  overridden: boolean;
 }
 
 const CATEGORY_LABELS: Record<ChecklistBankCategory, string> = {

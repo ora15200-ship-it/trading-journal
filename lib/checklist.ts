@@ -176,7 +176,8 @@ export async function addCategory(
 export async function addItemToCategory(
   categoryId: string,
   bankItem: ChecklistBankItem,
-  orderIndex: number
+  orderIndex: number,
+  isRequired: boolean = false
 ): Promise<ChecklistItem> {
   const supabase = createClient();
   const { data, error } = await supabase
@@ -186,6 +187,7 @@ export async function addItemToCategory(
       bank_item_id: bankItem.id,
       text: bankItem.name,
       requires_note: bankItem.requires_note,
+      is_required: isRequired,
       order_index: orderIndex,
     })
     .select()
@@ -198,7 +200,8 @@ export async function addCustomItem(
   categoryId: string,
   text: string,
   requiresNote: boolean,
-  orderIndex: number
+  orderIndex: number,
+  isRequired: boolean = false
 ): Promise<ChecklistItem> {
   const supabase = createClient();
   const { data, error } = await supabase
@@ -208,12 +211,22 @@ export async function addCustomItem(
       bank_item_id: null,
       text,
       requires_note: requiresNote,
+      is_required: isRequired,
       order_index: orderIndex,
     })
     .select()
     .single();
   if (error) throw error;
   return data as ChecklistItem;
+}
+
+export async function setItemRequired(itemId: string, isRequired: boolean): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('checklist_items')
+    .update({ is_required: isRequired })
+    .eq('id', itemId);
+  if (error) throw error;
 }
 
 export async function removeItem(itemId: string): Promise<void> {
@@ -235,6 +248,7 @@ export async function saveChecklistResponses(
     item_text_snapshot: d.item_text_snapshot,
     is_checked: d.is_checked,
     note: d.note || null,
+    overridden: d.overridden,
   }));
 
   const { error } = await supabase.from('trade_checklist_responses').insert(rows);

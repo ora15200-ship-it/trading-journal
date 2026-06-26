@@ -13,6 +13,7 @@ import {
   addCustomItem,
   removeItem,
   getBankItems,
+  setItemRequired,
 } from '@/lib/checklist'
 import {
   getCategoryLabel,
@@ -133,6 +134,14 @@ export default function ChecklistPage() {
     setBusy(false)
   }
 
+  const handleToggleRequired = async (itemId: string, current: boolean) => {
+    setBusy(true)
+    await setItemRequired(itemId, !current)
+    const tpl = await getTemplateForPortfolio(portfolioId)
+    setTemplate(tpl)
+    setBusy(false)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-zen-charcoal text-zen-cream flex items-center justify-center">
@@ -200,13 +209,26 @@ export default function ChecklistPage() {
                       className="flex items-center justify-between bg-white/5 rounded-lg px-3 py-2"
                     >
                       <span className="text-sm">{item.text}</span>
-                      <button
-                        onClick={() => handleRemoveItem(item.id)}
-                        disabled={busy}
-                        className="text-zen-cream/30 hover:text-red-400 text-sm px-1 transition-colors"
-                      >
-                        ✕
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleToggleRequired(item.id, item.is_required)}
+                          disabled={busy}
+                          className={`text-[11px] px-2 py-1 rounded-md border transition-colors ${
+                            item.is_required
+                              ? 'border-zen-sage text-zen-sage bg-zen-sage/10'
+                              : 'border-white/15 text-zen-cream/40'
+                          }`}
+                        >
+                          {item.is_required ? 'חובה' : 'לא חובה'}
+                        </button>
+                        <button
+                          onClick={() => handleRemoveItem(item.id)}
+                          disabled={busy}
+                          className="text-zen-cream/30 hover:text-red-400 text-sm px-1 transition-colors"
+                        >
+                          ✕
+                        </button>
+                      </div>
                     </div>
                   ))}
                   {cat.items.length === 0 && (
