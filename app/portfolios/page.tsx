@@ -175,13 +175,13 @@ export default function PortfoliosPage() {
                 <div className="flex justify-between items-start mb-3">
                   <span className="text-3xl">{PORTFOLIO_ICONS[p.type] || '💼'}</span>
                   <div className="flex gap-2">
-  <button onClick={e => { e.stopPropagation(); window.location.href = `/portfolios/${p.id}/checklist` }}
-    className="text-zen-cream/30 hover:text-zen-sage text-sm transition-colors px-1">📋</button>
-  <button onClick={e => { e.stopPropagation(); setEditPortfolio({ ...p }) }}
-    className="text-zen-cream/30 hover:text-zen-sage text-sm transition-colors px-1">✏️</button>
-  <button onClick={e => { e.stopPropagation(); handleDelete(p.id) }}
-    className="text-zen-cream/30 hover:text-red-400 text-sm transition-colors px-1">✕</button>
-</div>
+                    <button onClick={e => { e.stopPropagation(); window.location.href = `/portfolios/${p.id}/checklist` }}
+                      className="text-zen-cream/30 hover:text-zen-sage text-sm transition-colors px-1">📋</button>
+                    <button onClick={e => { e.stopPropagation(); setEditPortfolio({ ...p }) }}
+                      className="text-zen-cream/30 hover:text-zen-sage text-sm transition-colors px-1">✏️</button>
+                    <button onClick={e => { e.stopPropagation(); handleDelete(p.id) }}
+                      className="text-zen-cream/30 hover:text-red-400 text-sm transition-colors px-1">✕</button>
+                  </div>
                 </div>
 
                 <h3 className="text-lg font-semibold mb-0.5">{p.name}</h3>
