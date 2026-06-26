@@ -1,12 +1,26 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import { getTemplateForPortfolio, saveChecklistResponses } from '@/lib/checklist'
+import {
+  getCategoryLabel,
+  type ChecklistTemplateWithCategories,
+  type ChecklistBankCategory,
+  type ChecklistResponseDraft,
+} from '@/types/checklist'
+
+type ChecklistResponseState = { checked: boolean; note: string }
 
 export default function NewTradePage() {
   const [loading, setLoading] = useState(false)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+
+  const [template, setTemplate] = useState<ChecklistTemplateWithCategories | null>(null)
+  const [responses, setResponses] = useState<Record<string, ChecklistResponseState>>({})
+  const [showOverrideModal, setShowOverrideModal] = useState(false)
+  const [violations, setViolations] = useState<{ id: string; text: string }[]>([])
 
   const [form, setForm] = useState({
     date: '',
@@ -25,6 +39,24 @@ export default function NewTradePage() {
     const params = new URLSearchParams(window.location.search)
     return params.get('portfolio')
   }
+
+  useEffect(() => {
+    const portfolioId = getPortfolioId()
+    if (portfolioId) {
+      getTemplateForPortfolio(portfolioId).then(setTemplate)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!template) return
+    const initial: Record<string, ChecklistResponseState> = {}
+    template.categories.forEach((cat) => {
+      cat.items.forEach((item) => {
+        initial[item.id] = { checked: item.is_required, note: '' }
+      })
+    })
+    setResponses(initial)
+  }, [template])
 
   const entryPrice = parseFloat(form.entry_price) || 0
   const stopLoss = parseFloat(form.stop_loss) || 0
@@ -49,8 +81,43 @@ export default function NewTradePage() {
     }
   }
 
+  const toggleChecked = (itemId: string) => {
+    setResponses((prev) => ({
+      ...prev,
+      [itemId]: { ...prev[itemId], checked: !prev[itemId]?.checked },
+    }))
+  }
+
+  const setNote = (itemId: string, note: string) => {
+    setResponses((prev) => ({
+      ...prev,
+      [itemId]: { ...prev[itemId], note },
+    }))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (template) {
+      const found: { id: string; text: string }[] = []
+      template.categories.forEach((cat) => {
+        cat.items.forEach((item) => {
+          if (item.is_required && !responses[item.id]?.checked) {
+            found.push({ id: item.id, text: item.text })
+          }
+        })
+      })
+      if (found.length > 0) {
+        setViolations(found)
+        setShowOverrideModal(true)
+        return
+      }
+    }
+
+    await actuallySubmit([])
+  }
+
+  const actuallySubmit = async (overriddenIds: string[]) => {
     setLoading(true)
 
     const supabase = createClient()
@@ -74,7 +141,7 @@ export default function NewTradePage() {
 
     const { data: { user } } = await supabase.auth.getUser()
 
-    const { error } = await supabase.from('trades').insert([{
+    const { data: insertedTrade, error } = await supabase.from('trades').insert([{
       user_id: user?.id,
       portfolio_id: portfolioId || null,
       date: form.date,
@@ -91,15 +158,39 @@ export default function NewTradePage() {
       notes: form.notes || null,
       result: form.result ? parseFloat(form.result) : null,
       image_url,
-    }])
-
-    setLoading(false)
+    }]).select('id').single()
 
     if (error) {
+      setLoading(false)
       alert('שגיאה בשמירה: ' + error.message)
-    } else {
-      window.location.href = portfolioId ? `/dashboard?portfolio=${portfolioId}` : '/dashboard'
+      return
     }
+
+    if (template && insertedTrade) {
+      const drafts: ChecklistResponseDraft[] = []
+      template.categories.forEach((cat) => {
+        cat.items.forEach((item) => {
+          const r = responses[item.id] || { checked: false, note: '' }
+          drafts.push({
+            item_id: item.id,
+            item_text_snapshot: item.text,
+            is_checked: r.checked,
+            note: r.note,
+            requires_note: item.requires_note,
+            is_required: item.is_required,
+            overridden: overriddenIds.includes(item.id),
+          })
+        })
+      })
+      try {
+        await saveChecklistResponses(insertedTrade.id, drafts)
+      } catch (err) {
+        console.error('שגיאה בשמירת הצ׳ק ליסט:', err)
+      }
+    }
+
+    setLoading(false)
+    window.location.href = portfolioId ? `/dashboard?portfolio=${portfolioId}` : '/dashboard'
   }
 
   return (
@@ -214,6 +305,64 @@ export default function NewTradePage() {
             </div>
           </div>
 
+          {template && (
+            <div className="bg-white/5 rounded-xl border border-white/10 p-6">
+              <h3 className="text-sm text-zen-cream/50 mb-4 font-medium">צ'ק ליסט לפני כניסה</h3>
+              {template.categories.map((cat) => (
+                <div key={cat.id} className="mb-5 last:mb-0">
+                  <p className="text-xs text-zen-sage font-medium mb-2">
+                    {getCategoryLabel(cat.name as ChecklistBankCategory)}
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    {cat.items.map((item) => {
+                      const resp = responses[item.id] || { checked: false, note: '' }
+                      return (
+                        <div key={item.id}>
+                          {item.is_required ? (
+                            <div className="flex items-center justify-between bg-white/5 rounded-lg px-3 py-2.5">
+                              <span className="text-sm">{item.text}</span>
+                              <button
+                                type="button"
+                                onClick={() => toggleChecked(item.id)}
+                                className={`w-11 h-6 rounded-full relative transition-colors flex-shrink-0 ${
+                                  resp.checked ? 'bg-zen-sage' : 'bg-red-500/70'
+                                }`}
+                              >
+                                <span
+                                  className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${
+                                    resp.checked ? 'right-0.5' : 'left-0.5'
+                                  }`}
+                                />
+                              </button>
+                            </div>
+                          ) : (
+                            <label className="flex items-center gap-2 bg-white/5 rounded-lg px-3 py-2.5 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={resp.checked}
+                                onChange={() => toggleChecked(item.id)}
+                                className="w-4 h-4 accent-zen-sage flex-shrink-0"
+                              />
+                              <span className="text-sm">{item.text}</span>
+                            </label>
+                          )}
+                          {item.requires_note && (
+                            <input
+                              value={resp.note}
+                              onChange={(e) => setNote(item.id, e.target.value)}
+                              placeholder="הערה חופשית..."
+                              className="mt-1.5 w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-zen-cream placeholder-zen-cream/30 focus:outline-none focus:border-zen-sage"
+                            />
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="bg-white/5 rounded-xl border border-white/10 p-6">
             <label className="block text-sm text-zen-cream/50 mb-1">תוצאה ($) — רווח/הפסד סופי</label>
             <input type="number" name="result" step="0.01" placeholder="השאר ריק אם הטרייד עדיין פתוח" value={form.result} onChange={handleChange}
@@ -227,6 +376,40 @@ export default function NewTradePage() {
 
         </form>
       </main>
+
+      {showOverrideModal && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-zen-charcoal border border-red-500/40 rounded-2xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-3 text-red-400">חרגת מהכללים שהגדרת</h3>
+            <p className="text-sm text-zen-cream/60 mb-3">הכללים הבאים כבויים:</p>
+            <ul className="flex flex-col gap-2 mb-5">
+              {violations.map((v) => (
+                <li key={v.id} className="text-sm bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
+                  {v.text}
+                </li>
+              ))}
+            </ul>
+            <p className="text-sm text-zen-cream/60 mb-5">האם אתה בטוח שאתה רוצה לשמור את הטרייד בכל זאת?</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowOverrideModal(false)}
+                className="flex-1 bg-white/5 hover:bg-white/10 text-zen-cream/70 py-2 rounded-lg text-sm transition-colors"
+              >
+                בטל וחזור
+              </button>
+              <button
+                onClick={() => {
+                  setShowOverrideModal(false)
+                  actuallySubmit(violations.map((v) => v.id))
+                }}
+                className="flex-1 bg-red-500 hover:opacity-90 text-white py-2 rounded-lg text-sm font-semibold transition-opacity"
+              >
+                כן, שמור בכל זאת
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
