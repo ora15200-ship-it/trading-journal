@@ -14,6 +14,7 @@ type Trade = {
   take_profit: number | null
   result: number | null
   portfolio_id: string | null
+  image_urls: string[] | null
 }
 
 type Layer = {
@@ -65,7 +66,7 @@ export default function ManageTradePage() {
     const supabase = createClient()
     const { data: tradeData } = await supabase
       .from('trades')
-      .select('id, date, symbol, direction, entry_price, stop_loss, take_profit, result, portfolio_id')
+      .select('id, date, symbol, direction, entry_price, stop_loss, take_profit, result, portfolio_id, image_urls')
       .eq('id', tradeId)
       .single()
     setTrade(tradeData)
@@ -138,6 +139,7 @@ export default function ManageTradePage() {
   const riskState = getRiskState(trade.direction, trade.entry_price, currentSL)
   const isOpen = trade.result === null
   const timelineDesc = [...layers].reverse()
+  const entryImages = trade.image_urls || []
 
   return (
     <div className="min-h-screen bg-zen-charcoal text-zen-cream">
@@ -245,10 +247,20 @@ export default function ManageTradePage() {
         <div className="flex flex-col gap-4">
           <div className="bg-white/5 border border-white/10 rounded-xl p-4">
             <p className="text-xs text-zen-cream/40 mb-1">{trade.date} · כניסה ראשונית</p>
-            <p className="text-sm text-zen-cream/70">
+            <p className="text-sm text-zen-cream/70 mb-2">
               S.L: <span className="text-red-400">{trade.stop_loss ? `$${trade.stop_loss}` : '-'}</span> ·
               T.P: <span className="text-zen-profit">{trade.take_profit ? `$${trade.take_profit}` : '-'}</span>
             </p>
+            {entryImages.length > 0 ? (
+              <div className="flex gap-2 flex-wrap">
+                {entryImages.map((url, i) => (
+                  <img key={i} src={url} onClick={() => setLightboxImg(url)}
+                    className="h-16 w-16 object-cover rounded border border-white/10 cursor-pointer hover:opacity-80" />
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-zen-cream/30 italic">לא הועלו תמונות בזמן הכניסה לעסקה</p>
+            )}
           </div>
 
           {timelineDesc.map(layer => (

@@ -50,6 +50,7 @@ export default function NewTradePage() {
     const files = Array.from(e.target.files || [])
     const next = files.map((file) => ({ file, preview: URL.createObjectURL(file) }))
     setImages((prev) => [...prev, ...next])
+    e.target.value = ''
   }
 
   const removeImage = (index: number) => {
@@ -129,19 +130,19 @@ export default function NewTradePage() {
             <p className="text-xs text-zen-cream/40 uppercase tracking-wide">פרטי עסקה</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm text-blue-300 mb-1">תאריך</label>
+                <label className="block text-sm text-zen-cream/50 mb-1">תאריך</label>
                 <input type="date" name="date" required value={form.date} onChange={handleChange}
-                  className="w-full bg-zen-cream text-zen-charcoal rounded-lg px-4 py-2.5 focus:outline-none" />
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-zen-cream focus:outline-none focus:border-zen-sage" />
               </div>
               <div>
-                <label className="block text-sm text-blue-300 mb-1">סימול</label>
+                <label className="block text-sm text-zen-cream/50 mb-1">סימול</label>
                 <input type="text" name="symbol" required placeholder="AAPL" value={form.symbol} onChange={handleChange}
-                  className="w-full bg-zen-cream text-zen-charcoal rounded-lg px-4 py-2.5 placeholder-zen-charcoal/40 focus:outline-none" />
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-zen-cream placeholder-zen-cream/30 focus:outline-none focus:border-zen-sage" />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm text-blue-300 mb-1">כיוון</label>
+              <label className="block text-sm text-zen-cream/50 mb-1">כיוון</label>
               <div className="grid grid-cols-2 gap-3">
                 <button type="button" onClick={() => setForm({ ...form, direction: 'long' })}
                   className={`py-2.5 rounded-lg border-2 text-sm font-medium transition-all ${form.direction === 'long' ? 'border-zen-sage bg-white/5 text-zen-sage' : 'border-white/10 text-zen-cream/40'}`}>
@@ -157,24 +158,24 @@ export default function NewTradePage() {
             <p className="text-xs text-zen-cream/40 uppercase tracking-wide mt-2">מחירים וסיכון</p>
             <div className="grid grid-cols-4 gap-3">
               <div>
-                <label className="block text-sm text-blue-300 mb-1">כניסה</label>
+                <label className="block text-sm text-zen-cream/50 mb-1">כניסה</label>
                 <input type="number" name="entry_price" required step="0.01" value={form.entry_price} onChange={handleChange}
-                  className="w-full bg-zen-cream text-zen-charcoal rounded-lg px-3 py-2.5 focus:outline-none" />
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-zen-cream focus:outline-none focus:border-zen-sage" />
               </div>
               <div>
                 <label className="block text-sm text-red-400 mb-1">S.L</label>
                 <input type="number" name="stop_loss" step="0.01" value={form.stop_loss} onChange={handleChange}
-                  className="w-full bg-zen-cream text-zen-charcoal rounded-lg px-3 py-2.5 border-2 border-red-400 focus:outline-none" />
+                  className="w-full bg-white/5 border-2 border-red-400 rounded-lg px-3 py-2.5 text-zen-cream focus:outline-none" />
               </div>
               <div>
                 <label className="block text-sm text-zen-sage mb-1">T.P</label>
                 <input type="number" name="take_profit" step="0.01" value={form.take_profit} onChange={handleChange}
-                  className="w-full bg-zen-cream text-zen-charcoal rounded-lg px-3 py-2.5 border-2 border-zen-sage focus:outline-none" />
+                  className="w-full bg-white/5 border-2 border-zen-sage rounded-lg px-3 py-2.5 text-zen-cream focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm text-zen-sage mb-1">נקודת שינה ($)</label>
+                <label className="block text-sm text-zen-cream/50 mb-1">נקודת שינה ($)</label>
                 <input type="number" name="risk_amount" step="0.01" value={form.risk_amount} onChange={handleChange}
-                  className="w-full bg-zen-cream text-zen-charcoal rounded-lg px-3 py-2.5 border-2 border-zen-sage focus:outline-none" />
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-zen-cream focus:outline-none focus:border-zen-sage" />
               </div>
             </div>
 
@@ -182,11 +183,11 @@ export default function NewTradePage() {
               <div className="grid grid-cols-3 gap-3 mt-1">
                 <div className="bg-white/5 rounded-lg p-3 text-center">
                   <p className="text-xs text-zen-cream/40 mb-1">כמות</p>
-                  <p className="text-base font-semibold">{shares.toFixed(0)}</p>
+                  <p className="text-base font-semibold text-zen-cream">{shares.toFixed(0)}</p>
                 </div>
                 <div className="bg-white/5 rounded-lg p-3 text-center">
                   <p className="text-xs text-zen-cream/40 mb-1">שווי עסקה</p>
-                  <p className="text-base font-semibold">${positionSize.toFixed(0)}</p>
+                  <p className="text-base font-semibold text-zen-cream">${positionSize.toFixed(0)}</p>
                 </div>
                 <div className={`bg-white/5 rounded-lg p-3 text-center border ${rrBorderClass}`}>
                   <p className="text-xs text-zen-cream/40 mb-1">R:R</p>
@@ -197,35 +198,36 @@ export default function NewTradePage() {
           </section>
 
           {/* לבנה 2: תיעוד */}
-          <section className="bg-white/5 rounded-xl p-5 flex flex-col gap-4">
+          <section className="bg-white/5 rounded-xl border border-white/10 p-5 flex flex-col gap-4">
             <p className="text-xs text-zen-cream/40 uppercase tracking-wide">תיעוד</p>
             <div>
-              <label className="block text-sm text-blue-300 mb-2">תמונות מהפלטפורמה</label>
-              <div className="grid grid-cols-3 gap-3">
-                <label className="bg-zen-cream rounded-lg h-24 flex items-center justify-center text-zen-charcoal/40 text-2xl cursor-pointer">
+              <label className="block text-sm text-zen-cream/50 mb-2">תמונות מהפלטפורמה</label>
+              <div className="flex flex-wrap gap-3">
+                <label className="bg-white/5 border border-white/10 rounded-lg w-24 h-24 flex items-center justify-center text-zen-cream/40 text-2xl cursor-pointer hover:border-zen-sage transition-colors flex-shrink-0">
                   +
                   <input type="file" accept="image/*" multiple onChange={handleImages} className="hidden" />
                 </label>
                 {images.map((img, i) => (
-                  <div key={i} className="relative bg-zen-cream rounded-lg h-24 overflow-hidden">
+                  <div key={i} className="relative bg-white/5 border border-white/10 rounded-lg w-24 h-24 overflow-hidden flex-shrink-0">
                     <img src={img.preview} alt="" className="w-full h-full object-cover" />
                     <button type="button" onClick={() => removeImage(i)}
-                      className="absolute top-1 right-1 bg-zen-charcoal/70 text-zen-cream rounded-full w-5 h-5 text-xs">✕</button>
+                      className="absolute top-1 right-1 bg-zen-charcoal/80 text-zen-cream rounded-full w-5 h-5 text-xs flex items-center justify-center">✕</button>
                   </div>
                 ))}
               </div>
+              <p className="text-xs text-zen-cream/30 mt-2">אפשר להעלות כמה תמונות שתרצה — כל לחיצה על + מוסיפה עוד</p>
             </div>
             <div>
-              <label className="block text-sm text-blue-300 mb-1">הערות</label>
+              <label className="block text-sm text-zen-cream/50 mb-1">הערות</label>
               <textarea name="notes" rows={3} placeholder="תחושות, סיבות, תיאור הטרייד..." value={form.notes} onChange={handleChange}
-                className="w-full bg-zen-cream text-zen-charcoal rounded-lg px-4 py-2.5 placeholder-zen-charcoal/40 resize-none focus:outline-none" />
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-zen-cream placeholder-zen-cream/30 resize-none focus:outline-none focus:border-zen-sage" />
             </div>
           </section>
 
           <div>
             <label className="block text-sm text-zen-cream/50 mb-1">תוצאה ($) — השאר ריק אם פתוח</label>
             <input type="number" name="result" step="0.01" value={form.result} onChange={handleChange}
-              className="w-full bg-zen-cream text-zen-charcoal rounded-lg px-4 py-2.5 focus:outline-none" />
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-zen-cream focus:outline-none focus:border-zen-sage" />
           </div>
 
           {/* לבנה 3 */}

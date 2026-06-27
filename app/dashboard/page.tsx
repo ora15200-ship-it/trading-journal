@@ -21,7 +21,7 @@ type Trade = {
   result: number | null
   setup: string | null
   notes: string | null
-  image_url: string | null
+  image_urls: string[] | null
   portfolio_id: string | null
 }
 
@@ -37,7 +37,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
-  const [lightboxTrade, setLightboxTrade] = useState<{ image: string; notes: string | null; symbol: string } | null>(null)
+  const [lightboxTrade, setLightboxTrade] = useState<{ images: string[]; notes: string | null; symbol: string } | null>(null)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
   const [showChatModal, setShowChatModal] = useState(false)
   const [insights, setInsights] = useState<string | null>(null)
 
@@ -119,6 +120,17 @@ export default function DashboardPage() {
     }
   }
 
+  const openLightbox = (trade: Trade) => {
+    const imgs = trade.image_urls || []
+    if (imgs.length === 0) return
+    setLightboxTrade({ images: imgs, notes: trade.notes, symbol: trade.symbol })
+    setLightboxIndex(0)
+  }
+
+  const goToManageTrade = (id: string) => {
+    window.location.href = `/dashboard/manage-trade/${id}`
+  }
+
   const portfolioId = typeof window !== 'undefined' ? getPortfolioId() : null
   const newTradeUrl = portfolioId
     ? `/dashboard/new-trade?portfolio=${portfolioId}`
@@ -139,6 +151,26 @@ export default function DashboardPage() {
   })
   const monthProfit = monthTrades.reduce((sum, t) => sum + (t.result ?? 0), 0)
 
+  const ThumbnailCell = ({ trade }: { trade: Trade }) => {
+    const imgs = trade.image_urls || []
+    if (imgs.length === 0) {
+      return (
+        <div className="w-12 h-10 bg-white/5 rounded border border-white/10 flex items-center justify-center text-zen-cream/30 text-xs">אין</div>
+      )
+    }
+    return (
+      <div className="relative w-12 h-10 cursor-pointer" onClick={() => openLightbox(trade)}>
+        <img src={imgs[0]} alt="טרייד"
+          className="w-12 h-10 object-cover rounded hover:opacity-80 transition-opacity border border-white/10" />
+        {imgs.length > 1 && (
+          <span className="absolute -top-1.5 -right-1.5 bg-zen-sage text-zen-charcoal text-[10px] font-semibold rounded-full w-4 h-4 flex items-center justify-center">
+            +{imgs.length - 1}
+          </span>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-zen-charcoal text-zen-cream">
 
@@ -146,7 +178,24 @@ export default function DashboardPage() {
         <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onClick={() => setLightboxTrade(null)}>
           <div className="relative w-full max-w-3xl bg-zen-charcoal border border-white/10 rounded-2xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
             <button onClick={() => setLightboxTrade(null)} className="absolute top-3 left-3 z-10 bg-white/10 text-zen-cream rounded-full w-8 h-8 flex items-center justify-center text-lg hover:bg-white/20">✕</button>
-            <img src={lightboxTrade.image} alt="תמונת טרייד" className="w-full object-contain max-h-[60vh]" />
+
+            <div className="relative">
+              <img src={lightboxTrade.images[lightboxIndex]} alt="תמונת טרייד" className="w-full object-contain max-h-[60vh]" />
+              {lightboxTrade.images.length > 1 && (
+                <>
+                  <button onClick={() => setLightboxIndex(i => (i - 1 + lightboxTrade.images.length) % lightboxTrade.images.length)}
+                    className="absolute top-1/2 right-3 -translate-y-1/2 bg-black/50 text-zen-cream rounded-full w-8 h-8 flex items-center justify-center">›</button>
+                  <button onClick={() => setLightboxIndex(i => (i + 1) % lightboxTrade.images.length)}
+                    className="absolute top-1/2 left-3 -translate-y-1/2 bg-black/50 text-zen-cream rounded-full w-8 h-8 flex items-center justify-center">‹</button>
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                    {lightboxTrade.images.map((_, i) => (
+                      <span key={i} className={`w-1.5 h-1.5 rounded-full ${i === lightboxIndex ? 'bg-zen-sage' : 'bg-white/30'}`} />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
             <div className="p-5 border-t border-white/10">
               <p className="text-zen-cream/40 text-xs mb-2 font-semibold uppercase tracking-wider">הערות — {lightboxTrade.symbol}</p>
               {lightboxTrade.notes ? (
@@ -169,7 +218,7 @@ export default function DashboardPage() {
         <div className="flex gap-4 items-center text-sm">
           <button onClick={() => window.location.href = '/portfolios'} className="text-zen-cream/50 hover:text-zen-cream transition-colors">← התיקים שלי</button>
           <span className="text-zen-cream font-medium">דשבורד</span>
-          <button onClick={() => window.location.href = portfolioId ? `/dashboard/journal?portfolio=${portfolioId}` : '/dashboard/journal'} className="text-zen-cream/50 hover:text-zen-sage transition-colors">יומן</button>
+          <button onClick={() => window.location.href = portfolioId ? `/dashboard/journal?portfolio=${portfolioId}` : '/dashboard/journal'} className="text-zen-cream/50 hover:text-zen-sage transition-colors">לוח שנה</button>
           <button onClick={handleLogout} className="text-zen-cream/50 hover:text-red-400 transition-colors">התנתק</button>
         </div>
       </nav>
@@ -251,17 +300,8 @@ export default function DashboardPage() {
               </thead>
               <tbody>
                 {openTrades.map(trade => (
-                  <tr key={trade.id} onClick={() => window.location.href = `/dashboard/manage-trade/${trade.id}`}
-                    className="border-b border-white/10 hover:bg-white/5 transition-colors text-right cursor-pointer">
-                    <td className="py-3 pr-2">
-                      {trade.image_url ? (
-                        <img src={trade.image_url} alt="טרייד"
-                          onClick={(e) => { e.stopPropagation(); setLightboxTrade({ image: trade.image_url!, notes: trade.notes, symbol: trade.symbol }) }}
-                          className="w-12 h-10 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity border border-white/10" />
-                      ) : (
-                        <div className="w-12 h-10 bg-white/5 rounded border border-white/10 flex items-center justify-center text-zen-cream/30 text-xs">אין</div>
-                      )}
-                    </td>
+                  <tr key={trade.id} className="border-b border-white/10 hover:bg-white/5 transition-colors text-right">
+                    <td className="py-3 pr-2"><ThumbnailCell trade={trade} /></td>
                     <td className="py-3 pr-2">
                       {trade.direction === 'long' ? <span className="text-zen-profit font-bold text-lg">↑</span>
                         : trade.direction === 'short' ? <span className="text-red-400 font-bold text-lg">↓</span> : '-'}
@@ -284,11 +324,11 @@ export default function DashboardPage() {
                     <td className="py-3 pr-2 text-zen-cream/50">{trade.setup || '-'}</td>
                     <td className="py-3 pr-2">
                       <div className="flex gap-2 justify-end">
-                        <button onClick={(e) => { e.stopPropagation(); window.location.href = `/dashboard/manage-trade/${trade.id}` }}
+                        <button onClick={() => goToManageTrade(trade.id)}
                           className="text-xs bg-white/10 hover:bg-white/15 text-zen-cream px-2 py-1 rounded transition-colors">
                           ניהול עסקה
                         </button>
-                        <button onClick={(e) => { e.stopPropagation(); handleDelete(trade.id) }} disabled={deletingId === trade.id}
+                        <button onClick={() => handleDelete(trade.id)} disabled={deletingId === trade.id}
                           className="text-xs bg-red-900/40 hover:bg-red-900/60 text-red-300 px-2 py-1 rounded transition-colors disabled:opacity-50">
                           {deletingId === trade.id ? '...' : 'מחק'}
                         </button>
@@ -335,18 +375,9 @@ export default function DashboardPage() {
               </thead>
               <tbody>
                 {closedTradesSorted.map((trade, i) => (
-                  <tr key={trade.id} onClick={() => window.location.href = `/dashboard/manage-trade/${trade.id}`}
-                    className="border-b border-white/10 hover:bg-white/5 transition-colors text-right cursor-pointer">
+                  <tr key={trade.id} className="border-b border-white/10 hover:bg-white/5 transition-colors text-right">
                     <td className="py-3 pr-2 text-zen-cream/40">{i + 1}</td>
-                    <td className="py-3 pr-2">
-                      {trade.image_url ? (
-                        <img src={trade.image_url} alt="טרייד"
-                          onClick={(e) => { e.stopPropagation(); setLightboxTrade({ image: trade.image_url!, notes: trade.notes, symbol: trade.symbol }) }}
-                          className="w-12 h-10 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity border border-white/10" />
-                      ) : (
-                        <div className="w-12 h-10 bg-white/5 rounded border border-white/10 flex items-center justify-center text-zen-cream/30 text-xs">אין</div>
-                      )}
-                    </td>
+                    <td className="py-3 pr-2"><ThumbnailCell trade={trade} /></td>
                     <td className="py-3 pr-2">
                       {trade.direction === 'long' ? <span className="text-zen-profit font-bold text-lg">↑</span>
                         : trade.direction === 'short' ? <span className="text-red-400 font-bold text-lg">↓</span> : '-'}
@@ -372,15 +403,15 @@ export default function DashboardPage() {
                     <td className="py-3 pr-2 text-zen-cream/50">{trade.setup || '-'}</td>
                     <td className="py-3 pr-2">
                       <div className="flex gap-2 justify-end">
-                        <button onClick={(e) => { e.stopPropagation(); window.location.href = `/dashboard/manage-trade/${trade.id}` }}
+                        <button onClick={() => goToManageTrade(trade.id)}
                           className="text-xs bg-white/10 hover:bg-white/15 text-zen-cream px-2 py-1 rounded transition-colors">
                           ניהול עסקה
                         </button>
-                        <button onClick={(e) => { e.stopPropagation(); handleDownloadSummary(trade) }} disabled={downloadingId === trade.id}
+                        <button onClick={() => handleDownloadSummary(trade)} disabled={downloadingId === trade.id}
                           className="text-xs bg-zen-sage/15 hover:bg-zen-sage/25 text-zen-sage px-2 py-1 rounded transition-colors disabled:opacity-50">
                           {downloadingId === trade.id ? '...' : 'הורד סיכום'}
                         </button>
-                        <button onClick={(e) => { e.stopPropagation(); handleDelete(trade.id) }} disabled={deletingId === trade.id}
+                        <button onClick={() => handleDelete(trade.id)} disabled={deletingId === trade.id}
                           className="text-xs bg-red-900/40 hover:bg-red-900/60 text-red-300 px-2 py-1 rounded transition-colors disabled:opacity-50">
                           {deletingId === trade.id ? '...' : 'מחק'}
                         </button>
