@@ -173,6 +173,22 @@ export async function addCategory(
   return data as ChecklistCategory;
 }
 
+export async function removeCategory(categoryId: string): Promise<void> {
+  const supabase = createClient();
+  // קודם מוחקים את כל הפריטים שבתוך הקטגוריה, ואז את הקטגוריה עצמה
+  const { error: itemsError } = await supabase
+    .from('checklist_items')
+    .delete()
+    .eq('category_id', categoryId);
+  if (itemsError) throw itemsError;
+
+  const { error } = await supabase
+    .from('checklist_categories')
+    .delete()
+    .eq('id', categoryId);
+  if (error) throw error;
+}
+
 export async function addItemToCategory(
   categoryId: string,
   bankItem: ChecklistBankItem,
@@ -255,6 +271,53 @@ export async function removeItem(itemId: string): Promise<void> {
   const supabase = createClient();
   const { error } = await supabase.from('checklist_items').delete().eq('id', itemId);
   if (error) throw error;
+}
+
+export async function updateTemplatePhilosophy(templateId: string, philosophy: string): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('checklist_templates')
+    .update({ philosophy: philosophy.trim() || null })
+    .eq('id', templateId);
+  if (error) throw error;
+}
+
+async function deleteTemplateCompletely(portfolioId: string): Promise<void> {
+  const supabase = createClient();
+  const { data: existing } = await supabase
+    .from('checklist_templates')
+    .select('id')
+    .eq('portfolio_id', portfolioId)
+    .maybeSingle();
+
+  if (!existing) return;
+
+  const { data: categories } = await supabase
+    .from('checklist_categories')
+    .select('id')
+    .eq('template_id', existing.id);
+
+  const categoryIds = (categories || []).map((c) => c.id);
+
+  if (categoryIds.length > 0) {
+    await supabase.from('checklist_items').delete().in('category_id', categoryIds);
+    await supabase.from('checklist_categories').delete().in('id', categoryIds);
+  }
+
+  await supabase.from('checklist_templates').delete().eq('id', existing.id);
+}
+
+export async function replaceTemplateWithPreset(
+  portfolioId: string,
+  presetId: string
+): Promise<ChecklistTemplateWithCategories> {
+  await deleteTemplateCompletely(portfolioId);
+  return buildTemplateFromPreset(portfolioId, presetId);
+}
+
+export async function replaceTemplateWithEmpty(portfolioId: string): Promise<ChecklistTemplate> {
+  await deleteTemplateCompletely(portfolioId);
+  return createEmptyTemplate(portfolioId);
 }
 
 export async function saveChecklistResponses(

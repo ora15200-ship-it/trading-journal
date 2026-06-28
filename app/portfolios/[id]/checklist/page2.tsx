@@ -9,6 +9,7 @@ import {
   buildTemplateFromPreset,
   createEmptyTemplate,
   addCategory,
+  removeCategory,
   addItemToCategory,
   addCustomItem,
   removeItem,
@@ -16,6 +17,9 @@ import {
   setItemRequired,
   updateItemPersonalNote,
   updateItemText,
+  updateTemplatePhilosophy,
+  replaceTemplateWithPreset,
+  replaceTemplateWithEmpty,
 } from '@/lib/checklist'
 import {
   getCategoryLabel,
@@ -25,8 +29,20 @@ import {
   type ChecklistBankCategory,
 } from '@/types/checklist'
 
-// רק שתי קטגוריות מהבנק זמינות לבחירה ישירה. קטגוריה שלישית היא חופשית (מותאם אישית).
-const CATEGORY_OPTIONS: ChecklistBankCategory[] = ['fundamental', 'technical']
+// קטגוריות לבחירה: השלבים מתוך "ספר הנהלים" (שלבים 2-10) + הקטגוריות הקיימות + מותאם אישית
+const CATEGORY_OPTIONS: ChecklistBankCategory[] = [
+  'market_condition',
+  'stock_screening',
+  'stock_quality',
+  'setup',
+  'entry_trigger',
+  'confluence',
+  'risk_management',
+  'trade_management',
+  'exit',
+  'fundamental',
+  'technical',
+]
 const CUSTOM_CATEGORY_VALUE = '__custom__'
 
 export default function ChecklistPage() {
@@ -56,6 +72,14 @@ export default function ChecklistPage() {
   const [editText, setEditText] = useState('')
   const [editNote, setEditNote] = useState('')
 
+  // פילוסופיית האסטרטגיה
+  const [philosophyDraft, setPhilosophyDraft] = useState('')
+  const [editingPhilosophy, setEditingPhilosophy] = useState(false)
+  const [savingPhilosophy, setSavingPhilosophy] = useState(false)
+
+  // מתג החלפת תבנית
+  const [showTemplateSwitcher, setShowTemplateSwitcher] = useState(false)
+
   // פאנל ZEN Bot
   const [showAnalysis, setShowAnalysis] = useState(false)
   const [analysisLoading, setAnalysisLoading] = useState(false)
@@ -77,6 +101,7 @@ export default function ChecklistPage() {
       getBankItems(),
     ])
     setTemplate(tpl)
+    setPhilosophyDraft(tpl?.philosophy || '')
     setPresets(presetsData)
     setBankItems(bankData)
     setLoading(false)
@@ -87,18 +112,44 @@ export default function ChecklistPage() {
   }, [portfolioId])
 
   const handleUsePreset = async (presetId: string) => {
+    if (template) {
+      if (!confirm('החלפת התבנית תמחק את כל הקטגוריות והתנאים הקיימים בתבנית הנוכחית. להמשיך?')) return
+    }
     setBusy(true)
-    const tpl = await buildTemplateFromPreset(portfolioId, presetId)
+    const tpl = template
+      ? await replaceTemplateWithPreset(portfolioId, presetId)
+      : await buildTemplateFromPreset(portfolioId, presetId)
     setTemplate(tpl)
+    setPhilosophyDraft(tpl?.philosophy || '')
+    setShowTemplateSwitcher(false)
     setBusy(false)
   }
 
   const handleStartFromScratch = async () => {
+    if (template) {
+      if (!confirm('המעבר לבנייה אישית ימחק את כל הקטגוריות והתנאים הקיימים בתבנית הנוכחית. להמשיך?')) return
+    }
     setBusy(true)
-    await createEmptyTemplate(portfolioId)
+    if (template) {
+      await replaceTemplateWithEmpty(portfolioId)
+    } else {
+      await createEmptyTemplate(portfolioId)
+    }
     const tpl = await getTemplateForPortfolio(portfolioId)
     setTemplate(tpl)
+    setPhilosophyDraft(tpl?.philosophy || '')
+    setShowTemplateSwitcher(false)
     setBusy(false)
+  }
+
+  const handleSavePhilosophy = async () => {
+    if (!template) return
+    setSavingPhilosophy(true)
+    await updateTemplatePhilosophy(template.id, philosophyDraft)
+    const tpl = await getTemplateForPortfolio(portfolioId)
+    setTemplate(tpl)
+    setEditingPhilosophy(false)
+    setSavingPhilosophy(false)
   }
 
   const handleAddCategory = async () => {
@@ -111,6 +162,15 @@ export default function ChecklistPage() {
     const tpl = await getTemplateForPortfolio(portfolioId)
     setTemplate(tpl)
     setCustomCategoryName('')
+    setBusy(false)
+  }
+
+  const handleRemoveCategory = async (categoryId: string) => {
+    if (!confirm('למחוק את הקטגוריה הזו וכל התנאים שבתוכה?')) return
+    setBusy(true)
+    await removeCategory(categoryId)
+    const tpl = await getTemplateForPortfolio(portfolioId)
+    setTemplate(tpl)
     setBusy(false)
   }
 
@@ -206,7 +266,11 @@ export default function ChecklistPage() {
       const res = await fetch('/api/analyze-strategy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ portfolioName, categories: categoriesPayload }),
+        body: JSON.stringify({
+          portfolioName,
+          philosophy: template.philosophy,
+          categories: categoriesPayload,
+        }),
       })
       const data = await res.json()
       if (data.error) {
@@ -236,18 +300,28 @@ export default function ChecklistPage() {
     )
   }
 
+  const showSelector = !template || showTemplateSwitcher
+
   return (
     <div className="min-h-screen bg-zen-charcoal text-zen-cream">
       <nav className="bg-white/5 border-b border-white/10 px-6 py-4 flex justify-between items-center">
         <img src="/logo.svg" alt="ZenStock" className="h-8 w-auto" />
         <div className="flex items-center gap-4">
           {template && (
-            <button
-              onClick={openAnalysisPanel}
-              className="bg-white/10 hover:bg-white/15 text-zen-cream px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            >
-              🤖 ניתוח ZEN Bot
-            </button>
+            <>
+              <button
+                onClick={() => setShowTemplateSwitcher(true)}
+                className="bg-white/10 hover:bg-white/15 text-zen-cream px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                🔄 ערוך תבנית
+              </button>
+              <button
+                onClick={openAnalysisPanel}
+                className="bg-white/10 hover:bg-white/15 text-zen-cream px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                🤖 ניתוח ZEN Bot
+              </button>
+            </>
           )}
           <a href="/portfolios" className="text-zen-cream/50 hover:text-zen-sage transition-colors text-sm">
             חזרה לתיקים
@@ -261,8 +335,16 @@ export default function ChecklistPage() {
           <p className="text-zen-cream/50 text-sm">תיק: {portfolioName}</p>
         </div>
 
-        {!template ? (
+        {showSelector ? (
           <div>
+            {template && (
+              <button
+                onClick={() => setShowTemplateSwitcher(false)}
+                className="text-zen-cream/40 hover:text-zen-cream text-sm mb-4 inline-block"
+              >
+                ← ביטול, חזרה לתבנית הנוכחית
+              </button>
+            )}
             <p className="text-zen-cream/60 mb-4 text-sm">בחר תבנית מוכנה כנקודת התחלה, או התחל מאפס:</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               {presets.map((p) => (
@@ -281,22 +363,91 @@ export default function ChecklistPage() {
                   </button>
                 </div>
               ))}
+              <div className="bg-white/5 rounded-2xl border-2 border-dashed border-white/15 hover:border-zen-sage p-5 transition-all">
+                <h3 className="text-base font-semibold mb-1">בנייה אישית</h3>
+                <p className="text-xs text-zen-cream/40 mb-4">
+                  עמוד ריק לחלוטין — תבנה את כל הקטגוריות והתנאים בעצמך מאפס
+                </p>
+                <button
+                  onClick={handleStartFromScratch}
+                  disabled={busy}
+                  className="w-full bg-white/10 hover:bg-white/15 text-zen-cream py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-40"
+                >
+                  {busy ? 'יוצר...' : 'התחל מאפס'}
+                </button>
+              </div>
             </div>
-            <button
-              onClick={handleStartFromScratch}
-              disabled={busy}
-              className="w-full bg-white/5 hover:bg-white/10 border border-dashed border-white/15 text-zen-cream/60 py-3 rounded-xl text-sm transition-colors disabled:opacity-40"
-            >
-              {busy ? 'יוצר...' : 'התחל מאפס'}
-            </button>
           </div>
         ) : (
           <div>
+            {/* שלב 1 - פילוסופיית האסטרטגיה */}
+            <div className="bg-white/5 rounded-2xl border border-zen-sage/30 p-5 mb-4">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-sm font-semibold text-zen-sage">
+                  שלב 1 · פילוסופיית האסטרטגיה
+                </h3>
+                {!editingPhilosophy && (
+                  <button
+                    onClick={() => setEditingPhilosophy(true)}
+                    className="text-zen-cream/30 hover:text-zen-sage text-sm px-1 transition-colors"
+                  >
+                    ✏️
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-zen-cream/40 mb-3">
+                מה אני מחפש? באילו שווקים אני סוחר? מה היתרון (Edge) שלי?
+              </p>
+              {editingPhilosophy ? (
+                <div className="flex flex-col gap-2">
+                  <textarea
+                    value={philosophyDraft}
+                    onChange={(e) => setPhilosophyDraft(e.target.value)}
+                    placeholder="לדוגמה: אני מחפש מניות איכותיות במגמת עלייה שמבצעות פריצה של תבנית המשך עם ווליום גבוה."
+                    rows={3}
+                    className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-zen-cream text-sm focus:outline-none focus:border-zen-sage resize-none"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSavePhilosophy}
+                      disabled={savingPhilosophy}
+                      className="bg-zen-sage hover:opacity-90 text-zen-charcoal px-4 py-1.5 rounded-lg text-xs font-semibold transition-opacity disabled:opacity-40"
+                    >
+                      {savingPhilosophy ? 'שומר...' : 'שמור'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingPhilosophy(false)
+                        setPhilosophyDraft(template.philosophy || '')
+                      }}
+                      className="bg-white/5 hover:bg-white/10 text-zen-cream/60 px-4 py-1.5 rounded-lg text-xs transition-colors"
+                    >
+                      ביטול
+                    </button>
+                  </div>
+                </div>
+              ) : template.philosophy ? (
+                <p className="text-sm text-zen-cream/80 whitespace-pre-wrap">{template.philosophy}</p>
+              ) : (
+                <p className="text-xs text-zen-cream/30 italic">לא נכתבה עדיין פילוסופיה לאסטרטגיה</p>
+              )}
+            </div>
+
+            {/* שלבים 2-10 - קטגוריות */}
             {template.categories.map((cat) => (
               <div key={cat.id} className="bg-white/5 rounded-2xl border border-white/10 p-5 mb-4">
-                <h3 className="text-sm font-semibold text-zen-sage mb-3">
-                  {getCategoryLabel(cat.name)}
-                </h3>
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-sm font-semibold text-zen-sage">
+                    {getCategoryLabel(cat.name)}
+                  </h3>
+                  <button
+                    onClick={() => handleRemoveCategory(cat.id)}
+                    disabled={busy}
+                    className="text-zen-cream/30 hover:text-red-400 text-xs px-2 py-1 transition-colors whitespace-nowrap"
+                  >
+                    🗑 מחק קטגוריה
+                  </button>
+                </div>
 
                 <div className="flex flex-col gap-2 mb-3">
                   {cat.items.map((item) => {
@@ -480,7 +631,7 @@ export default function ChecklistPage() {
               </div>
             ))}
 
-            <div className="bg-white/5 rounded-2xl border border-dashed border-white/15 p-5 flex flex-col gap-2">
+            <div className="bg-white/5 rounded-2xl border border-dashed border-white/15 p-5 flex flex-col gap-2 mb-4">
               <div className="flex gap-2 items-center">
                 <select
                   value={newCategoryKey}
@@ -513,6 +664,26 @@ export default function ChecklistPage() {
                   className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-zen-cream text-sm focus:outline-none focus:border-zen-sage"
                 />
               )}
+            </div>
+
+            {/* שלבים 11-12 - תיעוד וסטטיסטיקה, מתבצעים בדשבורד */}
+            <div className="bg-white/5 rounded-2xl border border-dashed border-zen-sage/30 p-5">
+              <h3 className="text-sm font-semibold text-zen-sage mb-2">
+                שלבים 11-12 · תיעוד וסטטיסטיקה
+              </h3>
+              <p className="text-xs text-zen-cream/50 mb-4 leading-relaxed">
+                השלבים האחרונים ב"ספר הנהלים" — תיעוד כל עסקה (תמונות, הערות, סיבת הכניסה) וחישוב
+                הסטטיסטיקות (Win Rate, רווח כולל, וכו') — לא מתבצעים בעמוד הזה, הם כבר קורים
+                אוטומטית בדשבורד שלך: כל טרייד שאתה שומר נספר, ותוכל לראות את ההיסטוריה והנתונים
+                המצטברים שם.
+              </p>
+              
+              <button
+                onClick={() => { window.location.href = `/dashboard?portfolio=${portfolioId}` }}
+                className="inline-block bg-zen-sage hover:opacity-90 text-zen-charcoal px-4 py-2 rounded-lg text-sm font-semibold transition-opacity"
+              >
+                למעבר לדשבורד →
+              </button>
             </div>
           </div>
         )}

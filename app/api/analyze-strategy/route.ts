@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
   try {
-    const { portfolioName, categories } = await req.json()
+    const { portfolioName, philosophy, categories } = await req.json()
 
     const strategyText = categories
       .map((cat: any) => {
@@ -17,12 +17,17 @@ export async function POST(req: NextRequest) {
       })
       .join('\n\n')
 
-    const systemPrompt = `את/ה עוזר מסחר שמנתח אסטרטגיית מסחר אישית של סוחר, בעברית בלבד.
-תקבל רשימת קטגוריות ותנאים שהסוחר בנה לעצמו עבור התיק "${portfolioName}", כולל הסברים אישיים שכתב לכל תנאי (אם כתב).
+    const philosophyText = philosophy
+      ? `פילוסופיית האסטרטגיה (מה הסוחר מחפש, ה-Edge שלו): ${philosophy}\n\n`
+      : ''
 
-המשימה שלך: לכתוב ניתוח מילולי קצר וברור (כ-4-8 שורות) שמסביר:
-- מה אופי האסטרטגיה הכוללת (האם היא מבוססת בעיקר על ניתוח טכני, פונדומנטלי, או שילוב ביניהם)
-- האם יש פערים או חוסר עקביות (לדוגמה: תנאי בלי הסבר אישי, או תנאים שיכולים להתנגש זה בזה)
+    const systemPrompt = `את/ה עוזר מסחר שמנתח אסטרטגיית מסחר אישית של סוחר סווינג, בעברית בלבד.
+תקבל פילוסופיית מסחר כללית (אופציונלי) ורשימת קטגוריות ותנאים שהסוחר בנה לעצמו עבור התיק "${portfolioName}", כולל הסברים אישיים שכתב לכל תנאי (אם כתב).
+
+המשימה שלך: לכתוב ניתוח מילולי קצר וברור (כ-5-9 שורות) שמסביר:
+- האם האסטרטגיה עקבית עם הפילוסופיה הכללית שהוצהרה (אם נכתבה)
+- מה אופי האסטרטגיה הכוללת (האם היא מבוססת בעיקר על Setup וטריגרים, ניהול סיכון, אישורים טכניים, או שילוב)
+- האם יש פערים, שלבים חסרים מתוך התהליך (לדוגמה: יש Setup אבל אין טריגר כניסה ברור, או יש כניסה אך אין ניהול סיכון), או תנאים בלי הסבר אישי
 - טיפ מעשי אחד לשיפור או חידוד האסטרטגיה
 
 היה תכליתי, חם, ולא שיפוטי. אל תמציא תנאים שלא קיימים ברשימה שקיבלת.`
@@ -39,7 +44,7 @@ export async function POST(req: NextRequest) {
         max_tokens: 1024,
         system: systemPrompt,
         messages: [
-          { role: 'user', content: `הנה האסטרטגיה האישית שלי:\n\n${strategyText}` },
+          { role: 'user', content: `${philosophyText}הנה האסטרטגיה האישית שלי:\n\n${strategyText}` },
         ],
       }),
     })

@@ -4,7 +4,15 @@ export type ChecklistBankCategory =
   | 'fundamental'
   | 'technical'
   | 'market_context'
+  | 'market_condition'
+  | 'stock_screening'
+  | 'stock_quality'
+  | 'setup'
+  | 'entry_trigger'
+  | 'confluence'
   | 'risk_management'
+  | 'trade_management'
+  | 'exit'
   | 'psychology'
   | 'strategy_filter';
 
@@ -35,6 +43,7 @@ export interface ChecklistTemplate {
   id: string;
   portfolio_id: string;
   name: string;
+  philosophy: string | null;
   created_at: string;
 }
 
@@ -91,7 +100,15 @@ const CATEGORY_LABELS: Record<ChecklistBankCategory, string> = {
   fundamental: 'ניתוח פונדומנטלי',
   technical: 'ניתוח טכני',
   market_context: 'הקשר שוק',
+  market_condition: 'תנאי שוק כללי',
+  stock_screening: 'סינון מניות (Scanner)',
+  stock_quality: 'איכות המניה',
+  setup: 'ה-Setup',
+  entry_trigger: 'טריגר כניסה',
+  confluence: 'אישורים נוספים (Confluence)',
   risk_management: 'ניהול סיכונים',
+  trade_management: 'ניהול העסקה',
+  exit: 'יציאה',
   psychology: 'פסיכולוגיה ומשמעת',
   strategy_filter: 'מסנן אסטרטגיה',
 };
