@@ -131,6 +131,11 @@ export default function DashboardPage() {
     window.location.href = `/dashboard/manage-trade/${id}`
   }
 
+  const goToChecklist = () => {
+    if (!portfolioId) return
+    window.location.href = `/portfolios/${portfolioId}/checklist`
+  }
+
   const portfolioId = typeof window !== 'undefined' ? getPortfolioId() : null
   const newTradeUrl = portfolioId
     ? `/dashboard/new-trade?portfolio=${portfolioId}`
@@ -257,15 +262,24 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <div className="flex justify-end gap-2 mb-4">
-          <button
-            onClick={() => setShowChatModal(true)}
-            className="bg-white/10 hover:bg-white/15 text-zen-cream px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-            ZEN Bot
-          </button>
-          <Link href={newTradeUrl} className="bg-zen-sage hover:opacity-90 text-zen-charcoal px-4 py-2 rounded-lg text-sm font-semibold transition-opacity">
-            + טרייד חדש
-          </Link>
+        <div className="flex justify-between items-center mb-4">
+          {portfolioId && (
+            <button
+              onClick={goToChecklist}
+              className="bg-white/10 hover:bg-white/15 text-zen-cream px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+              📋 האסטרטגיה שלי
+            </button>
+          )}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowChatModal(true)}
+              className="bg-white/10 hover:bg-white/15 text-zen-cream px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+              ZEN Bot
+            </button>
+            <Link href={newTradeUrl} className="bg-zen-sage hover:opacity-90 text-zen-charcoal px-4 py-2 rounded-lg text-sm font-semibold transition-opacity">
+              + טרייד חדש
+            </Link>
+          </div>
         </div>
 
         {/* עסקאות פתוחות - תמיד מוצג */}
