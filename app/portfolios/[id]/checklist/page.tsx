@@ -302,6 +302,33 @@ export default function ChecklistPage() {
 
   const showSelector = !template || showTemplateSwitcher
 
+  // סדר תצוגה קבוע לקטגוריות, לפי השלבים הלוגיים של האסטרטגיה (לא לפי סדר ההוספה)
+  const CATEGORY_DISPLAY_ORDER: Record<string, number> = {
+    market_condition: 1,
+    stock_screening: 2,
+    stock_quality: 3,
+    setup: 4,
+    entry_trigger: 5,
+    confluence: 6,
+    risk_management: 7,
+    trade_management: 8,
+    exit: 9,
+    fundamental: 10,
+    technical: 11,
+    psychology: 12,
+    strategy_filter: 13,
+    market_context: 14,
+  }
+
+  const sortedCategories = template
+    ? [...template.categories].sort((a, b) => {
+        const orderA = CATEGORY_DISPLAY_ORDER[a.name] ?? 999
+        const orderB = CATEGORY_DISPLAY_ORDER[b.name] ?? 999
+        if (orderA !== orderB) return orderA - orderB
+        return a.order_index - b.order_index
+      })
+    : []
+
   return (
     <div className="min-h-screen bg-zen-charcoal text-zen-cream">
       <nav className="bg-white/5 border-b border-white/10 px-6 py-4 flex justify-between items-center">
@@ -433,8 +460,8 @@ export default function ChecklistPage() {
               )}
             </div>
 
-            {/* שלבים 2-10 - קטגוריות */}
-            {template.categories.map((cat) => (
+            {/* שלבים 2-10 - קטגוריות, בסדר קבוע */}
+            {sortedCategories.map((cat) => (
               <div key={cat.id} className="bg-white/5 rounded-2xl border border-white/10 p-5 mb-4">
                 <div className="flex justify-between items-center mb-3">
                   <h3 className="text-sm font-semibold text-zen-sage">
