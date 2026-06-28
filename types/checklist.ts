@@ -51,6 +51,7 @@ export interface ChecklistItem {
   category_id: string;
   bank_item_id: string | null;
   text: string;
+  personal_note: string | null;
   requires_note: boolean;
   is_required: boolean;
   order_index: number;
@@ -95,6 +96,6 @@ const CATEGORY_LABELS: Record<ChecklistBankCategory, string> = {
   strategy_filter: 'מסנן אסטרטגיה',
 };
 
-export function getCategoryLabel(category: ChecklistBankCategory): string {
-  return CATEGORY_LABELS[category] ?? category;
+export function getCategoryLabel(category: string): string {
+  return CATEGORY_LABELS[category as ChecklistBankCategory] ?? category;
 }

@@ -177,7 +177,8 @@ export async function addItemToCategory(
   categoryId: string,
   bankItem: ChecklistBankItem,
   orderIndex: number,
-  isRequired: boolean = false
+  isRequired: boolean = false,
+  personalNote: string = ''
 ): Promise<ChecklistItem> {
   const supabase = createClient();
   const { data, error } = await supabase
@@ -186,6 +187,7 @@ export async function addItemToCategory(
       category_id: categoryId,
       bank_item_id: bankItem.id,
       text: bankItem.name,
+      personal_note: personalNote.trim() || null,
       requires_note: bankItem.requires_note,
       is_required: isRequired,
       order_index: orderIndex,
@@ -201,7 +203,8 @@ export async function addCustomItem(
   text: string,
   requiresNote: boolean,
   orderIndex: number,
-  isRequired: boolean = false
+  isRequired: boolean = false,
+  personalNote: string = ''
 ): Promise<ChecklistItem> {
   const supabase = createClient();
   const { data, error } = await supabase
@@ -210,6 +213,7 @@ export async function addCustomItem(
       category_id: categoryId,
       bank_item_id: null,
       text,
+      personal_note: personalNote.trim() || null,
       requires_note: requiresNote,
       is_required: isRequired,
       order_index: orderIndex,
@@ -218,6 +222,24 @@ export async function addCustomItem(
     .single();
   if (error) throw error;
   return data as ChecklistItem;
+}
+
+export async function updateItemPersonalNote(itemId: string, personalNote: string): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('checklist_items')
+    .update({ personal_note: personalNote.trim() || null })
+    .eq('id', itemId);
+  if (error) throw error;
+}
+
+export async function updateItemText(itemId: string, text: string): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('checklist_items')
+    .update({ text })
+    .eq('id', itemId);
+  if (error) throw error;
 }
 
 export async function setItemRequired(itemId: string, isRequired: boolean): Promise<void> {

@@ -14,6 +14,8 @@ import {
   removeItem,
   getBankItems,
   setItemRequired,
+  updateItemPersonalNote,
+  updateItemText,
 } from '@/lib/checklist'
 import {
   getCategoryLabel,
@@ -23,14 +25,9 @@ import {
   type ChecklistBankCategory,
 } from '@/types/checklist'
 
-const CATEGORY_OPTIONS: ChecklistBankCategory[] = [
-  'strategy_filter',
-  'technical',
-  'fundamental',
-  'market_context',
-  'risk_management',
-  'psychology',
-]
+// רק שתי קטגוריות מהבנק זמינות לבחירה ישירה. קטגוריה שלישית היא חופשית (מותאם אישית).
+const CATEGORY_OPTIONS: ChecklistBankCategory[] = ['fundamental', 'technical']
+const CUSTOM_CATEGORY_VALUE = '__custom__'
 
 export default function ChecklistPage() {
   const params = useParams()
@@ -43,14 +40,27 @@ export default function ChecklistPage() {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
 
-  const [newCategoryKey, setNewCategoryKey] = useState<ChecklistBankCategory>('strategy_filter')
+  const [newCategoryKey, setNewCategoryKey] = useState<string>(CATEGORY_OPTIONS[0])
+  const [customCategoryName, setCustomCategoryName] = useState('')
 
   const [openAddBankFor, setOpenAddBankFor] = useState<string | null>(null)
   const [selectedBankItemId, setSelectedBankItemId] = useState<string>('')
+  const [bankPersonalNote, setBankPersonalNote] = useState('')
 
   const [openAddCustomFor, setOpenAddCustomFor] = useState<string | null>(null)
   const [customText, setCustomText] = useState('')
   const [customRequiresNote, setCustomRequiresNote] = useState(false)
+  const [customPersonalNote, setCustomPersonalNote] = useState('')
+
+  const [editingItemId, setEditingItemId] = useState<string | null>(null)
+  const [editText, setEditText] = useState('')
+  const [editNote, setEditNote] = useState('')
+
+  // פאנל ZEN Bot
+  const [showAnalysis, setShowAnalysis] = useState(false)
+  const [analysisLoading, setAnalysisLoading] = useState(false)
+  const [analysisText, setAnalysisText] = useState<string | null>(null)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
 
   const load = async () => {
     const supabase = createClient()
@@ -93,10 +103,14 @@ export default function ChecklistPage() {
 
   const handleAddCategory = async () => {
     if (!template) return
+    const isCustom = newCategoryKey === CUSTOM_CATEGORY_VALUE
+    const name = isCustom ? customCategoryName.trim() : newCategoryKey
+    if (isCustom && !name) return
     setBusy(true)
-    await addCategory(template.id, newCategoryKey, template.categories.length)
+    await addCategory(template.id, name, template.categories.length)
     const tpl = await getTemplateForPortfolio(portfolioId)
     setTemplate(tpl)
+    setCustomCategoryName('')
     setBusy(false)
   }
 
@@ -105,11 +119,12 @@ export default function ChecklistPage() {
     if (!bankItem) return
     const category = template?.categories.find((c) => c.id === categoryId)
     setBusy(true)
-    await addItemToCategory(categoryId, bankItem, category?.items.length || 0)
+    await addItemToCategory(categoryId, bankItem, category?.items.length || 0, false, bankPersonalNote)
     const tpl = await getTemplateForPortfolio(portfolioId)
     setTemplate(tpl)
     setOpenAddBankFor(null)
     setSelectedBankItemId('')
+    setBankPersonalNote('')
     setBusy(false)
   }
 
@@ -117,12 +132,20 @@ export default function ChecklistPage() {
     if (!customText.trim()) return
     const category = template?.categories.find((c) => c.id === categoryId)
     setBusy(true)
-    await addCustomItem(categoryId, customText.trim(), customRequiresNote, category?.items.length || 0)
+    await addCustomItem(
+      categoryId,
+      customText.trim(),
+      customRequiresNote,
+      category?.items.length || 0,
+      false,
+      customPersonalNote
+    )
     const tpl = await getTemplateForPortfolio(portfolioId)
     setTemplate(tpl)
     setOpenAddCustomFor(null)
     setCustomText('')
     setCustomRequiresNote(false)
+    setCustomPersonalNote('')
     setBusy(false)
   }
 
@@ -142,6 +165,69 @@ export default function ChecklistPage() {
     setBusy(false)
   }
 
+  const startEditing = (itemId: string, currentText: string, currentNote: string | null) => {
+    setEditingItemId(itemId)
+    setEditText(currentText)
+    setEditNote(currentNote || '')
+  }
+
+  const cancelEditing = () => {
+    setEditingItemId(null)
+    setEditText('')
+    setEditNote('')
+  }
+
+  const handleSaveEdit = async (itemId: string, isCustomItem: boolean) => {
+    setBusy(true)
+    if (isCustomItem && editText.trim()) {
+      await updateItemText(itemId, editText.trim())
+    }
+    await updateItemPersonalNote(itemId, editNote)
+    const tpl = await getTemplateForPortfolio(portfolioId)
+    setTemplate(tpl)
+    cancelEditing()
+    setBusy(false)
+  }
+
+  const handleAnalyze = async () => {
+    if (!template) return
+    setAnalysisLoading(true)
+    setAnalysisError(null)
+    try {
+      const categoriesPayload = template.categories.map((cat) => ({
+        label: getCategoryLabel(cat.name),
+        items: cat.items.map((item) => ({
+          text: item.text,
+          personal_note: item.personal_note,
+          is_required: item.is_required,
+        })),
+      }))
+
+      const res = await fetch('/api/analyze-strategy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ portfolioName, categories: categoriesPayload }),
+      })
+      const data = await res.json()
+      if (data.error) {
+        setAnalysisError(data.error)
+      } else {
+        setAnalysisText(data.analysis)
+      }
+    } catch (err: any) {
+      setAnalysisError(err.message || 'שגיאה בניתוח')
+    } finally {
+      setAnalysisLoading(false)
+    }
+  }
+
+  const openAnalysisPanel = () => {
+    setShowAnalysis(true)
+    if (!analysisText && !analysisLoading) {
+      handleAnalyze()
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-zen-charcoal text-zen-cream flex items-center justify-center">
@@ -154,14 +240,24 @@ export default function ChecklistPage() {
     <div className="min-h-screen bg-zen-charcoal text-zen-cream">
       <nav className="bg-white/5 border-b border-white/10 px-6 py-4 flex justify-between items-center">
         <img src="/logo.svg" alt="ZenStock" className="h-8 w-auto" />
-        <a href="/portfolios" className="text-zen-cream/50 hover:text-zen-sage transition-colors text-sm">
-          חזרה לתיקים
-        </a>
+        <div className="flex items-center gap-4">
+          {template && (
+            <button
+              onClick={openAnalysisPanel}
+              className="bg-white/10 hover:bg-white/15 text-zen-cream px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              🤖 ניתוח ZEN Bot
+            </button>
+          )}
+          <a href="/portfolios" className="text-zen-cream/50 hover:text-zen-sage transition-colors text-sm">
+            חזרה לתיקים
+          </a>
+        </div>
       </nav>
 
       <main className="max-w-3xl mx-auto px-6 py-12">
         <div className="mb-8">
-          <h2 className="font-display text-2xl mb-1">צ'ק ליסט לפני טרייד</h2>
+          <h2 className="font-display text-2xl mb-1">אסטרטגיה אישית</h2>
           <p className="text-zen-cream/50 text-sm">תיק: {portfolioName}</p>
         </div>
 
@@ -199,38 +295,93 @@ export default function ChecklistPage() {
             {template.categories.map((cat) => (
               <div key={cat.id} className="bg-white/5 rounded-2xl border border-white/10 p-5 mb-4">
                 <h3 className="text-sm font-semibold text-zen-sage mb-3">
-                  {getCategoryLabel(cat.name as ChecklistBankCategory)}
+                  {getCategoryLabel(cat.name)}
                 </h3>
 
                 <div className="flex flex-col gap-2 mb-3">
-                  {cat.items.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between bg-white/5 rounded-lg px-3 py-2"
-                    >
-                      <span className="text-sm">{item.text}</span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleToggleRequired(item.id, item.is_required)}
-                          disabled={busy}
-                          className={`text-[11px] px-2 py-1 rounded-md border transition-colors ${
-                            item.is_required
-                              ? 'border-zen-sage text-zen-sage bg-zen-sage/10'
-                              : 'border-white/15 text-zen-cream/40'
-                          }`}
-                        >
-                          {item.is_required ? 'חובה' : 'לא חובה'}
-                        </button>
-                        <button
-                          onClick={() => handleRemoveItem(item.id)}
-                          disabled={busy}
-                          className="text-zen-cream/30 hover:text-red-400 text-sm px-1 transition-colors"
-                        >
-                          ✕
-                        </button>
+                  {cat.items.map((item) => {
+                    const isCustomItem = !item.bank_item_id
+                    const isEditing = editingItemId === item.id
+
+                    if (isEditing) {
+                      return (
+                        <div key={item.id} className="bg-white/5 rounded-lg px-3 py-3 flex flex-col gap-2">
+                          {isCustomItem ? (
+                            <input
+                              value={editText}
+                              onChange={(e) => setEditText(e.target.value)}
+                              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-zen-cream text-sm focus:outline-none focus:border-zen-sage"
+                            />
+                          ) : (
+                            <span className="text-sm font-medium">{item.text}</span>
+                          )}
+                          <textarea
+                            value={editNote}
+                            onChange={(e) => setEditNote(e.target.value)}
+                            placeholder="הסבר אישי (אופציונלי)... לדוגמה: אני מחפש מניות עם ווליום גבוה מהממוצע"
+                            rows={2}
+                            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-zen-cream text-xs focus:outline-none focus:border-zen-sage resize-none"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleSaveEdit(item.id, isCustomItem)}
+                              disabled={busy}
+                              className="bg-zen-sage hover:opacity-90 text-zen-charcoal px-4 py-1.5 rounded-lg text-xs font-semibold transition-opacity disabled:opacity-40"
+                            >
+                              שמור
+                            </button>
+                            <button
+                              onClick={cancelEditing}
+                              className="bg-white/5 hover:bg-white/10 text-zen-cream/60 px-4 py-1.5 rounded-lg text-xs transition-colors"
+                            >
+                              ביטול
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    }
+
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-start justify-between bg-white/5 rounded-lg px-3 py-2 gap-3"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm">{item.text}</span>
+                          {item.personal_note && (
+                            <p className="text-xs text-zen-cream/40 mt-1">{item.personal_note}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <button
+                            onClick={() => handleToggleRequired(item.id, item.is_required)}
+                            disabled={busy}
+                            className={`text-[11px] px-2 py-1 rounded-md border transition-colors whitespace-nowrap ${
+                              item.is_required
+                                ? 'border-zen-sage text-zen-sage bg-zen-sage/10'
+                                : 'border-white/15 text-zen-cream/40'
+                            }`}
+                          >
+                            {item.is_required ? 'חובה' : 'לא חובה'}
+                          </button>
+                          <button
+                            onClick={() => startEditing(item.id, item.text, item.personal_note)}
+                            disabled={busy}
+                            className="text-zen-cream/30 hover:text-zen-sage text-sm px-1 transition-colors"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => handleRemoveItem(item.id)}
+                            disabled={busy}
+                            className="text-zen-cream/30 hover:text-red-400 text-sm px-1 transition-colors"
+                          >
+                            ✕
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                   {cat.items.length === 0 && (
                     <p className="text-xs text-zen-cream/30 italic">אין פריטים בקטגוריה הזו עדיין</p>
                   )}
@@ -252,36 +403,45 @@ export default function ChecklistPage() {
                 </div>
 
                 {openAddBankFor === cat.id && (
-                  <div className="mt-3 flex gap-2">
-                    <select
-                      value={selectedBankItemId}
-                      onChange={(e) => setSelectedBankItemId(e.target.value)}
-                      className="flex-1 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-zen-sage"
-                      style={{ backgroundColor: '#202022', color: '#F7F6F2' }}
-                    >
-                      <option value="" style={{ backgroundColor: '#202022', color: '#F7F6F2' }}>
-                        בחר תנאי...
-                      </option>
-                      {bankItems
-                        .filter((b) => b.category === cat.name)
-                        .filter((b) => !cat.items.some((i) => i.bank_item_id === b.id))
-                        .map((b) => (
-                          <option
-                            key={b.id}
-                            value={b.id}
-                            style={{ backgroundColor: '#202022', color: '#F7F6F2' }}
-                          >
-                            {b.name}
-                          </option>
-                        ))}
-                    </select>
-                    <button
-                      onClick={() => handleAddBankItem(cat.id)}
-                      disabled={busy || !selectedBankItemId}
-                      className="bg-zen-sage hover:opacity-90 text-zen-charcoal px-4 rounded-lg text-sm font-semibold transition-opacity disabled:opacity-40"
-                    >
-                      הוסף
-                    </button>
+                  <div className="mt-3 flex flex-col gap-2">
+                    <div className="flex gap-2">
+                      <select
+                        value={selectedBankItemId}
+                        onChange={(e) => setSelectedBankItemId(e.target.value)}
+                        className="flex-1 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-zen-sage"
+                        style={{ backgroundColor: '#202022', color: '#F7F6F2' }}
+                      >
+                        <option value="" style={{ backgroundColor: '#202022', color: '#F7F6F2' }}>
+                          בחר תנאי...
+                        </option>
+                        {bankItems
+                          .filter((b) => b.category === cat.name)
+                          .filter((b) => !cat.items.some((i) => i.bank_item_id === b.id))
+                          .map((b) => (
+                            <option
+                              key={b.id}
+                              value={b.id}
+                              style={{ backgroundColor: '#202022', color: '#F7F6F2' }}
+                            >
+                              {b.name}
+                            </option>
+                          ))}
+                      </select>
+                      <button
+                        onClick={() => handleAddBankItem(cat.id)}
+                        disabled={busy || !selectedBankItemId}
+                        className="bg-zen-sage hover:opacity-90 text-zen-charcoal px-4 rounded-lg text-sm font-semibold transition-opacity disabled:opacity-40"
+                      >
+                        הוסף
+                      </button>
+                    </div>
+                    <textarea
+                      value={bankPersonalNote}
+                      onChange={(e) => setBankPersonalNote(e.target.value)}
+                      placeholder="הסבר אישי (אופציונלי)... לדוגמה: אני מחפש מניות עם ווליום גבוה מהממוצע"
+                      rows={2}
+                      className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-zen-cream text-xs focus:outline-none focus:border-zen-sage resize-none"
+                    />
                   </div>
                 )}
 
@@ -292,6 +452,13 @@ export default function ChecklistPage() {
                       onChange={(e) => setCustomText(e.target.value)}
                       placeholder="לדוגמה: בדקתי דוח רבעוני אחרון"
                       className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-zen-cream text-sm focus:outline-none focus:border-zen-sage"
+                    />
+                    <textarea
+                      value={customPersonalNote}
+                      onChange={(e) => setCustomPersonalNote(e.target.value)}
+                      placeholder="הסבר אישי (אופציונלי)..."
+                      rows={2}
+                      className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-zen-cream text-xs focus:outline-none focus:border-zen-sage resize-none"
                     />
                     <label className="flex items-center gap-2 text-xs text-zen-cream/50">
                       <input
@@ -313,30 +480,82 @@ export default function ChecklistPage() {
               </div>
             ))}
 
-            <div className="bg-white/5 rounded-2xl border border-dashed border-white/15 p-5 flex gap-2 items-center">
-              <select
-                value={newCategoryKey}
-                onChange={(e) => setNewCategoryKey(e.target.value as ChecklistBankCategory)}
-                className="flex-1 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-zen-sage"
-                style={{ backgroundColor: '#202022', color: '#F7F6F2' }}
-              >
-                {CATEGORY_OPTIONS.map((key) => (
-                  <option key={key} value={key} style={{ backgroundColor: '#202022', color: '#F7F6F2' }}>
-                    {getCategoryLabel(key)}
+            <div className="bg-white/5 rounded-2xl border border-dashed border-white/15 p-5 flex flex-col gap-2">
+              <div className="flex gap-2 items-center">
+                <select
+                  value={newCategoryKey}
+                  onChange={(e) => setNewCategoryKey(e.target.value)}
+                  className="flex-1 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-zen-sage"
+                  style={{ backgroundColor: '#202022', color: '#F7F6F2' }}
+                >
+                  {CATEGORY_OPTIONS.map((key) => (
+                    <option key={key} value={key} style={{ backgroundColor: '#202022', color: '#F7F6F2' }}>
+                      {getCategoryLabel(key)}
+                    </option>
+                  ))}
+                  <option value={CUSTOM_CATEGORY_VALUE} style={{ backgroundColor: '#202022', color: '#F7F6F2' }}>
+                    קטגוריה מותאמת אישית +
                   </option>
-                ))}
-              </select>
-              <button
-                onClick={handleAddCategory}
-                disabled={busy}
-                className="bg-white/5 hover:bg-white/10 text-zen-cream/70 px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-40"
-              >
-                הוסף קטגוריה
-              </button>
+                </select>
+                <button
+                  onClick={handleAddCategory}
+                  disabled={busy || (newCategoryKey === CUSTOM_CATEGORY_VALUE && !customCategoryName.trim())}
+                  className="bg-white/5 hover:bg-white/10 text-zen-cream/70 px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-40"
+                >
+                  הוסף קטגוריה
+                </button>
+              </div>
+              {newCategoryKey === CUSTOM_CATEGORY_VALUE && (
+                <input
+                  value={customCategoryName}
+                  onChange={(e) => setCustomCategoryName(e.target.value)}
+                  placeholder="שם הקטגוריה שלך, לדוגמה: ניתוח רוחב שוק"
+                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-zen-cream text-sm focus:outline-none focus:border-zen-sage"
+                />
+              )}
             </div>
           </div>
         )}
       </main>
+
+      {/* פאנל ZEN Bot בצד */}
+      {showAnalysis && (
+        <div className="fixed inset-0 bg-black/60 z-50" onClick={() => setShowAnalysis(false)}>
+          <div
+            className="fixed inset-y-0 right-0 w-full max-w-sm bg-zen-charcoal border-l border-white/10 p-6 overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-1">
+              <h3 className="text-lg font-semibold flex items-center gap-2">🤖 ניתוח ZEN Bot</h3>
+              <button
+                onClick={() => setShowAnalysis(false)}
+                className="text-zen-cream/40 hover:text-zen-cream text-lg px-1"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-zen-cream/40 text-sm mb-5">תיק: {portfolioName}</p>
+
+            {analysisLoading ? (
+              <div className="text-zen-cream/40 text-sm py-10 text-center">מנתח את האסטרטגיה...</div>
+            ) : analysisError ? (
+              <div className="text-red-400 text-sm">{analysisError}</div>
+            ) : analysisText ? (
+              <p className="text-zen-cream/80 text-sm leading-relaxed whitespace-pre-wrap">{analysisText}</p>
+            ) : (
+              <div className="text-zen-cream/40 text-sm py-10 text-center">אין עדיין ניתוח</div>
+            )}
+
+            <button
+              onClick={handleAnalyze}
+              disabled={analysisLoading}
+              className="w-full mt-6 bg-white/10 hover:bg-white/15 text-zen-cream py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-40"
+            >
+              {analysisLoading ? 'מנתח...' : '🔄 נתח מחדש'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
