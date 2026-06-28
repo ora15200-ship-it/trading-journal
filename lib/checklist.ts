@@ -111,46 +111,24 @@ export async function buildTemplateFromPreset(
 
   const bankItemsById = new Map(bankItems.map((b) => [b.id, b]));
 
-  const byCategory = new Map<string, typeof presetItems>();
+  // רק מזהים אילו קטגוריות שייכות לתבנית הזו, בלי לאכלס אותן בתנאים
+  const categoriesSet = new Set<string>();
   for (const pi of presetItems) {
     const bankItem = bankItemsById.get(pi.bank_item_id);
     if (!bankItem) continue;
-    const list = byCategory.get(bankItem.category) ?? [];
-    list.push(pi);
-    byCategory.set(bankItem.category, list);
+    categoriesSet.add(bankItem.category);
   }
 
-  const categories: ChecklistCategory[] = [];
   let orderIndex = 0;
-
-  for (const [categoryKey, presetItemsInCategory] of byCategory.entries()) {
-    const { data: category, error: categoryError } = await supabase
+  for (const categoryKey of categoriesSet) {
+    const { error: categoryError } = await supabase
       .from('checklist_categories')
       .insert({
         template_id: template.id,
         name: categoryKey,
         order_index: orderIndex++,
-      })
-      .select()
-      .single();
+      });
     if (categoryError) throw categoryError;
-    categories.push(category as ChecklistCategory);
-
-    const itemsToInsert = presetItemsInCategory.map((pi, idx) => {
-      const bankItem = bankItemsById.get(pi.bank_item_id)!;
-      return {
-        category_id: category.id,
-        bank_item_id: bankItem.id,
-        text: bankItem.name,
-        requires_note: bankItem.requires_note,
-        order_index: idx,
-      };
-    });
-
-    const { error: itemsError } = await supabase
-      .from('checklist_items')
-      .insert(itemsToInsert);
-    if (itemsError) throw itemsError;
   }
 
   const full = await getTemplateForPortfolio(portfolioId);
