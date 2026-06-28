@@ -17,15 +17,22 @@ export default function JournalPage() {
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth())
 
+  const getPortfolioId = () => {
+    const params = new URLSearchParams(window.location.search)
+    return params.get('portfolio')
+  }
+
   useEffect(() => {
     const init = async () => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { window.location.href = '/login'; return }
-      const { data } = await supabase
-        .from('trades')
-        .select('id, date, result, symbol')
-        .order('date', { ascending: true })
+
+      const portfolioId = getPortfolioId()
+      let query = supabase.from('trades').select('id, date, result, symbol').order('date', { ascending: true })
+      query = portfolioId ? query.eq('portfolio_id', portfolioId) : query.is('portfolio_id', null)
+
+      const { data } = await query
       setTrades(data || [])
       setLoading(false)
     }
